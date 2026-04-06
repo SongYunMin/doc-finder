@@ -1,8 +1,8 @@
-from doc_finder.graph import build_graph
+from doc_finder.graphs.search_graph import build_text_search_graph
 
 
 def test_graph_echoes_query_into_answer() -> None:
-    graph = build_graph()
+    graph = build_text_search_graph()
 
     result = graph.invoke({"query": "langgraph basic setup"})
 

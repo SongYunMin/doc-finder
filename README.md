@@ -1,15 +1,15 @@
 # doc-finder
 
-Very small Python LangGraph starter for this workspace.
+FastAPI-first text search server with LangGraph inside the application layer.
 
-## What is included
+## Current structure
 
-- `pyproject.toml`: minimal dependency and pytest setup
-- `src/doc_finder/graph.py`: one-node `StateGraph`
-- `src/doc_finder/main.py`: simple CLI entrypoint
-- `src/doc_finder/api.py`: FastAPI wrapper over the graph
-- `tests/test_graph.py`: smoke test for graph invocation
-- `tests/test_api.py`: smoke tests for HTTP endpoints
+- `src/doc_finder/app.py`: FastAPI app entrypoint
+- `src/doc_finder/api/`: routers and HTTP layer
+- `src/doc_finder/schemas/`: request and response models
+- `src/doc_finder/services/`: application service layer
+- `src/doc_finder/graphs/`: LangGraph workflows
+- `tests/`: API, service, and graph smoke tests
 
 ## Recommended Python version
 
@@ -25,29 +25,29 @@ source .venv/bin/activate
 python -m pip install -e '.[dev]'
 ```
 
-## Run
-
-```bash
-python -m doc_finder.main --query "hello"
-```
-
 ## Run API
 
 ```bash
-uvicorn doc_finder.api:app --reload
+uvicorn doc_finder.app:app --reload
 ```
 
 Available endpoints:
 
 - `GET /health`
-- `POST /invoke`
+- `POST /search/text`
 
 Example:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/invoke \
+curl -X POST http://127.0.0.1:8000/search/text \
   -H 'Content-Type: application/json' \
   -d '{"query":"hello"}'
+```
+
+## Run CLI smoke check
+
+```bash
+python -m doc_finder.main --query "hello"
 ```
 
 ## Test

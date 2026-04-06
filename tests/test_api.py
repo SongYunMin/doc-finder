@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from doc_finder.api import app
+from doc_finder.app import app
 
 
 client = TestClient(app)
@@ -13,8 +13,8 @@ def test_health_endpoint_returns_ok() -> None:
     assert response.json() == {"status": "ok"}
 
 
-def test_invoke_endpoint_returns_graph_result() -> None:
-    response = client.post("/invoke", json={"query": "hello api"})
+def test_text_search_endpoint_returns_graph_result() -> None:
+    response = client.post("/search/text", json={"query": "hello api"})
 
     assert response.status_code == 200
     assert response.json() == {

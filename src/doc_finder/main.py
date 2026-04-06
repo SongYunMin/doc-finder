@@ -1,6 +1,7 @@
 import argparse
 
-from doc_finder.graph import build_graph
+from doc_finder.schemas.search import TextSearchRequest
+from doc_finder.services.search_service import SearchService
 
 
 def main() -> None:
@@ -12,9 +13,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    graph = build_graph()
-    result = graph.invoke({"query": args.query})
-    print(result)
+    service = SearchService()
+    result = service.search(TextSearchRequest(query=args.query))
+    print(result.model_dump())
 
 
 if __name__ == "__main__":
