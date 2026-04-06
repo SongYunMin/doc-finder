@@ -15,8 +15,6 @@ FastAPI-first text search server with LangGraph inside the application layer.
 
 Use Python `3.13`.
 
-`langchain-core` currently emits a compatibility warning on Python `3.14+`, so this project explicitly targets `<3.14`.
-
 ## Install
 
 ```bash
@@ -28,7 +26,7 @@ python -m pip install -e '.[dev]'
 ## Run API
 
 ```bash
-uvicorn doc_finder.app:app --reload
+python -m doc_finder.main --reload
 ```
 
 Available endpoints:
@@ -47,7 +45,7 @@ curl -X POST http://127.0.0.1:8000/search/text \
 ## Run CLI smoke check
 
 ```bash
-python -m doc_finder.main --query "hello"
+python -m doc_finder.cli --query "hello"
 ```
 
 ## Test

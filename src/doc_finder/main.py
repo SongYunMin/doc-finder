@@ -1,21 +1,25 @@
 import argparse
 
-from doc_finder.schemas.search import TextSearchRequest
-from doc_finder.services.search_service import SearchService
+import uvicorn
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the minimal LangGraph example.")
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Run the doc-finder API server.")
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind the server.")
+    parser.add_argument("--port", type=int, default=8000, help="Port to bind the server.")
     parser.add_argument(
-        "--query",
-        default="langgraph basic setup",
-        help="Query text to push through the graph.",
+        "--reload",
+        action="store_true",
+        help="Enable autoreload for development.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    service = SearchService()
-    result = service.search(TextSearchRequest(query=args.query))
-    print(result.model_dump())
+    uvicorn.run(
+        "doc_finder.app:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,23 @@
+@baseUrl = http://127.0.0.1:8000
+
+### Health Check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### Text Search
+POST {{baseUrl}}/search/text
+Content-Type: application/json
+Accept: application/json
+
+{
+  "query": "중3 국어 문학 비유법"
+}
+
+### Text Search - Simple Smoke
+POST {{baseUrl}}/search/text
+Content-Type: application/json
+Accept: application/json
+
+{
+  "query": "hello"
+}
