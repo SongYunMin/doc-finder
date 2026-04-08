@@ -4,20 +4,22 @@
 GET {{baseUrl}}/health
 Accept: application/json
 
-### Text Search
-POST {{baseUrl}}/search/text
+### Tag Search
+POST {{baseUrl}}/search/by-tags
 Content-Type: application/json
 Accept: application/json
 
 {
-  "query": "중3 국어 문학 비유법"
+  "query": "사과",
+  "top_k": 5
 }
 
-### Text Search - Simple Smoke
+### Deprecated Alias
 POST {{baseUrl}}/search/text
 Content-Type: application/json
 Accept: application/json
 
 {
-  "query": "hello"
+  "query": "apple",
+  "top_k": 3
 }

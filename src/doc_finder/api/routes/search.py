@@ -1,22 +1,27 @@
-from functools import lru_cache
+from fastapi import APIRouter, Depends, Request
 
-from fastapi import APIRouter, Depends
-
-from doc_finder.schemas.search import TextSearchRequest, TextSearchResponse
+from doc_finder.schemas.search import TagSearchRequest, TagSearchResponse
 from doc_finder.services.search_service import SearchService
 
 
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-@lru_cache
-def get_search_service() -> SearchService:
-    return SearchService()
+def get_search_service(request: Request) -> SearchService:
+    return request.app.state.search_service
 
 
-@router.post("/text", response_model=TextSearchResponse)
-def text_search(
-    request: TextSearchRequest,
+@router.post("/by-tags", response_model=TagSearchResponse)
+def search_by_tags(
+    request: TagSearchRequest,
     service: SearchService = Depends(get_search_service),
-) -> TextSearchResponse:
+) -> TagSearchResponse:
+    return service.search(request)
+
+
+@router.post("/text", response_model=TagSearchResponse, deprecated=True)
+def text_search_alias(
+    request: TagSearchRequest,
+    service: SearchService = Depends(get_search_service),
+) -> TagSearchResponse:
     return service.search(request)

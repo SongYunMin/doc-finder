@@ -40,7 +40,7 @@
 - `normalized_tags` exact/synonym 후보를 찾는다.
 - 저장된 tag projection 기반 임베딩 검색으로 추가 후보를 찾는다.
 - 후보를 병합하고 랭킹한다.
-- 결과로 `content_id + illustration_id + preview + tags + cms_ref`를 반환한다.
+- 결과로 `unit_id + data_id + image_id + preview + tags + cms_ref`를 반환한다.
 
 ### 시나리오 B. 표기가 달라도 같은 이미지를 찾기
 - 사용자가 `apple`을 검색한다.
@@ -70,7 +70,7 @@
 3. exact/synonym tag 후보를 찾는다.
 4. tag projection 임베딩 검색으로 추가 후보를 찾는다.
 5. 후보를 병합하고 랭킹한다.
-6. `content_id + illustration_id + preview + tags + cms_ref + score`를 반환한다.
+6. `unit_id + data_id + image_id + preview + tags + cms_ref + score`를 반환한다.
 7. 상세 콘텐츠는 CMS가 이어서 응답한다.
 
 즉, 1차 MVP의 검색은 단순 태그 필터가 아니라 **LangGraph 기반 리트리버**가 중심이다.
@@ -98,12 +98,13 @@
 ---
 
 ## 6. 저장 모델 핵심
-1차 저장 단위는 `content_id + illustration_id`다.
+1차 저장 단위는 `unit_id + data_id + image_id`다.
 
 예시 필드:
 
-- `content_id`
-- `illustration_id`
+- `unit_id`
+- `data_id`
+- `image_id`
 - `object_path`
 - `sha256`
 - `file_size`
@@ -135,7 +136,7 @@
 - taxonomy + 자유태그 생성
 - normalized tag 생성
 - tag projection 생성
-- `content_id + illustration_id` 기준 저장
+- `unit_id + data_id + image_id` 기준 저장
 - LangGraph Retrieval Graph 기반 객체명 검색 API
 - CMS 참조 키 반환
 - low-confidence review 분리
@@ -147,8 +148,9 @@
 
 기본 응답:
 
-- `content_id`
-- `illustration_id`
+- `unit_id`
+- `data_id`
+- `image_id`
 - `thumbnail_url` 또는 preview path
 - 대표 태그
 - confidence

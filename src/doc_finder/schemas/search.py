@@ -1,10 +1,36 @@
 from pydantic import BaseModel, Field
 
 
-class TextSearchRequest(BaseModel):
+class TagSearchRequest(BaseModel):
     query: str = Field(min_length=1)
+    top_k: int = Field(default=10, ge=1, le=100)
+    review_status: str | None = None
 
 
-class TextSearchResponse(BaseModel):
-    query: str
-    answer: str
+class CmsReference(BaseModel):
+    unit_id: int
+    data_id: int
+
+
+class TagSearchResult(BaseModel):
+    unit_id: int
+    data_id: int
+    image_id: int
+    asset_path: str
+    preview_path: str | None = None
+    matched_tags: list[str] = Field(default_factory=list)
+    confidence: float
+    score: float
+    cms_ref: CmsReference
+
+
+class TagSearchResponse(BaseModel):
+    results: list[TagSearchResult] = Field(default_factory=list)
+
+
+class TextSearchRequest(TagSearchRequest):
+    pass
+
+
+class TextSearchResponse(TagSearchResponse):
+    pass
