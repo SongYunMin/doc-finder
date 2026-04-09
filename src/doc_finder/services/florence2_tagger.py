@@ -77,6 +77,7 @@ class Florence2VisionTagger:
         self._model = AutoModelForCausalLM.from_pretrained(
             self._model_id,
             torch_dtype=dtype,
+            attn_implementation="eager",
             trust_remote_code=True,
         ).to(self._device)
         self._processor = AutoProcessor.from_pretrained(

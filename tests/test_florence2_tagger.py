@@ -81,3 +81,59 @@ def test_florence2_tagger_marks_low_evidence_result_as_pending() -> None:
     assert result.normalized_tags == ["tiny object"]
     assert result.confidence == pytest.approx(0.45)
     assert result.review_status == "pending"
+
+
+def test_florence2_model_loader_uses_torch_dtype_keyword(monkeypatch) -> None:
+    from doc_finder.services.florence2_tagger import Florence2VisionTagger
+
+    captured: dict[str, object] = {}
+
+    class _FakeModel:
+        def to(self, device: str):
+            captured["to_device"] = device
+            return self
+
+    class _FakeAutoModelForCausalLM:
+        @staticmethod
+        def from_pretrained(model_id: str, **kwargs):
+            captured["model_id"] = model_id
+            captured["kwargs"] = kwargs
+            return _FakeModel()
+
+    class _FakeAutoProcessor:
+        @staticmethod
+        def from_pretrained(model_id: str, **kwargs):
+            captured["processor_model_id"] = model_id
+            captured["processor_kwargs"] = kwargs
+            return object()
+
+    class _FakeTorch:
+        float32 = "float32"
+
+    monkeypatch.setitem(__import__("sys").modules, "torch", _FakeTorch())
+    monkeypatch.setitem(
+        __import__("sys").modules,
+        "transformers",
+        type(
+            "_FakeTransformers",
+            (),
+            {
+                "AutoModelForCausalLM": _FakeAutoModelForCausalLM,
+                "AutoProcessor": _FakeAutoProcessor,
+            },
+        )(),
+    )
+
+    tagger = Florence2VisionTagger(
+        model_id="microsoft/Florence-2-base",
+        device="cpu",
+        torch_dtype="float32",
+        query_normalizer=QueryNormalizer(),
+        prompt_runner=None,
+    )
+
+    tagger._get_model_bundle()
+
+    assert captured["kwargs"]["torch_dtype"] == "float32"
+    assert "dtype" not in captured["kwargs"]
+    assert captured["kwargs"]["attn_implementation"] == "eager"

@@ -9,10 +9,12 @@ description = "Minimal LangGraph scaffold for doc-finder"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
+    "einops>=0.8,<1.0",
     "fastapi>=0.115,<1.0",
     "langgraph>=1.0,<2.0",
     "pillow>=10.0,<12.0",
     "psycopg[binary]>=3.2,<4.0",
+    "timm>=1.0,<2.0",
     "torch>=2.3,<3.0",
     "transformers>=4.46,<5.0",
     "uvicorn>=0.30,<1.0",
