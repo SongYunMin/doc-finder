@@ -137,3 +137,34 @@ def test_ingestion_service_indexes_tags_from_florence2_provider(tmp_path: Path) 
     assert document.keyword_tags == ["apple", "red apple"]
     assert document.normalized_tags == ["사과"]
     assert document.review_status == "approved"
+
+
+def test_ingestion_service_reports_indexed_and_rejected_items(tmp_path: Path) -> None:
+    valid = tmp_path / "10565_20077_1.svg"
+    invalid = tmp_path / "wrong.svg"
+    _write_svg(valid, "apple")
+    _write_svg(invalid, "ignored")
+
+    messages: list[str] = []
+    repository = InMemoryImageIndexRepository()
+    service = IngestionService(
+        repository=repository,
+        tagger=StaticVisionTagger(
+            {
+                valid.name: TaggingResult(
+                    keyword_tags=["사과", "apple"],
+                    normalized_tags=["사과"],
+                    confidence=0.95,
+                )
+            }
+        ),
+        embedding_service=HashingEmbeddingService(),
+        progress_reporter=messages.append,
+    )
+
+    summary = service.ingest_directory(tmp_path)
+
+    assert summary.indexed_count == 1
+    assert summary.reject_count == 1
+    assert any(message.startswith("[indexed]") for message in messages)
+    assert any(message.startswith("[reject]") for message in messages)

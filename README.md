@@ -19,11 +19,14 @@ Image assets must follow this pattern:
 ```text
 <unitId>_<dataId>_<imageOrder>.svg
 <unitId>_<dataId>_<imageOrder>.png
+<unitId>_<dataId>.svg
+<unitId>_<dataId>.png
 ```
 
 - `unitId`: 문항 개념 식별자
 - `dataId`: 같은 문항 개념 아래의 컨텐츠 식별자
 - `imageOrder`: 같은 `unitId + dataId` 조합 안에서의 이미지 순서
+- `imageOrder`가 없으면 기본값 `1`로 처리한다
 
 ## Recommended Python version
 

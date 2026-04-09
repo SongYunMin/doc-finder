@@ -1,4 +1,6 @@
 from pathlib import Path
+from io import BytesIO
+import sys
 
 import pytest
 
@@ -83,6 +85,34 @@ def test_florence2_tagger_marks_low_evidence_result_as_pending() -> None:
     assert result.review_status == "pending"
 
 
+def test_florence2_tagger_reduces_sentence_like_caption_to_object_tokens() -> None:
+    from doc_finder.services.florence2_tagger import Florence2VisionTagger
+
+    tagger = Florence2VisionTagger(
+        model_id="microsoft/Florence-2-base",
+        device="cpu",
+        torch_dtype="float32",
+        query_normalizer=QueryNormalizer(),
+        prompt_runner=_StubFlorenceRunner(
+            {
+                "<OD>": {"<OD>": {"labels": []}},
+                "<DETAILED_CAPTION>": {
+                    "<DETAILED_CAPTION>": (
+                        "the image shows a person in a wheelchair at night, "
+                        "with the grass visible at the bottom."
+                    )
+                },
+            }
+        ),
+    )
+
+    result = tagger.tag(Path("10565_20077_1.png"), "sha")
+
+    assert result.keyword_tags == ["person", "wheelchair", "grass"]
+    assert result.normalized_tags == ["person", "wheelchair", "grass"]
+    assert result.review_status == "pending"
+
+
 def test_florence2_model_loader_uses_torch_dtype_keyword(monkeypatch) -> None:
     from doc_finder.services.florence2_tagger import Florence2VisionTagger
 
@@ -137,3 +167,30 @@ def test_florence2_model_loader_uses_torch_dtype_keyword(monkeypatch) -> None:
     assert captured["kwargs"]["torch_dtype"] == "float32"
     assert "dtype" not in captured["kwargs"]
     assert captured["kwargs"]["attn_implementation"] == "eager"
+
+
+def test_load_image_as_rgb_supports_svg(monkeypatch, tmp_path: Path) -> None:
+    from PIL import Image
+    from doc_finder.services.florence2_tagger import _load_image_as_rgb
+
+    svg_path = tmp_path / "10565_20077_1.svg"
+    svg_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="10"></svg>',
+        encoding="utf-8",
+    )
+
+    png_bytes = BytesIO()
+    Image.new("RGB", (12, 10), color="white").save(png_bytes, format="PNG")
+
+    class _FakeCairoSvg:
+        @staticmethod
+        def svg2png(*, bytestring: bytes) -> bytes:
+            assert b"<svg" in bytestring
+            return png_bytes.getvalue()
+
+    monkeypatch.setitem(sys.modules, "cairosvg", _FakeCairoSvg())
+
+    image = _load_image_as_rgb(svg_path)
+
+    assert image.mode == "RGB"
+    assert image.size == (12, 10)

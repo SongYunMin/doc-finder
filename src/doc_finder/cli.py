@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     # MVP에서는 배치 인덱싱을 HTTP job 없이 돌릴 수 있게 CLI를 우선 경로로 둔다.
-    service = build_default_ingestion_service()
+    service = build_default_ingestion_service(progress_reporter=print)
     result = service.ingest_directory(Path(args.image_dir))
     print(asdict(result))
 

@@ -50,7 +50,7 @@ def test_cli_ingest_prints_summary(capsys, monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         cli_module,
         "build_default_ingestion_service",
-        lambda: _StubIngestionService(),
+        lambda progress_reporter=None: _StubIngestionService(),
     )
 
     cli_module.main(["ingest", "--image-dir", str(tmp_path)])

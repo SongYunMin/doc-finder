@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Callable
 
 from doc_finder.repositories.image_index import ImageDocument, RejectedAsset
 from doc_finder.services.embedding_service import HashingEmbeddingService
@@ -29,6 +30,7 @@ class IngestionService:
         query_normalizer: QueryNormalizer | None = None,
         max_file_size_bytes: int = 500_000,
         review_threshold: float = 0.8,
+        progress_reporter: Callable[[str], None] | None = None,
     ) -> None:
         self._repository = repository
         self._tagger = tagger
@@ -36,6 +38,7 @@ class IngestionService:
         self._query_normalizer = query_normalizer or QueryNormalizer()
         self._max_file_size_bytes = max_file_size_bytes
         self._review_threshold = review_threshold
+        self._progress_reporter = progress_reporter
         self._repository.ensure_schema()
 
     def ingest_directory(self, directory: Path | str) -> IngestionSummary:
@@ -53,6 +56,9 @@ class IngestionService:
                 )
                 if self._repository.has_sha256(metadata.sha256):
                     summary.duplicate_count += 1
+                    self._report(
+                        f"[duplicate] {asset_path} sha256={metadata.sha256}"
+                    )
                     continue
 
                 tagging_result = self._tagger.tag(asset_path, metadata.sha256)
@@ -90,8 +96,19 @@ class IngestionService:
                 )
                 if inserted:
                     summary.indexed_count += 1
+                    self._report(
+                        "[indexed] "
+                        f"{asset_path} "
+                        f"keyword_tags={tagging_result.keyword_tags} "
+                        f"normalized_tags={normalized_tags} "
+                        f"confidence={tagging_result.confidence:.2f} "
+                        f"review_status={review_status}"
+                    )
                 else:
                     summary.duplicate_count += 1
+                    self._report(
+                        f"[duplicate] {asset_path} sha256={metadata.sha256}"
+                    )
             except FilenameParseError as exc:
                 # reject 이력은 남겨야 나중에 잘못된 파일만 따로 고쳐서 재처리할 수 있다.
                 self._record_reject(summary, asset_path, "invalid_filename", str(exc))
@@ -146,3 +163,8 @@ class IngestionService:
             )
         )
         summary.reject_count += 1
+        self._report(f"[reject] {asset_path} reason={reason} detail={detail}")
+
+    def _report(self, message: str) -> None:
+        if self._progress_reporter is not None:
+            self._progress_reporter(message)

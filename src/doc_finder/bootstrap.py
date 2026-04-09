@@ -33,7 +33,7 @@ def build_default_search_service() -> SearchService:
     )
 
 
-def build_default_ingestion_service() -> IngestionService:
+def build_default_ingestion_service(progress_reporter=None) -> IngestionService:
     query_normalizer = QueryNormalizer()
     repository = build_default_repository()
     return IngestionService(
@@ -41,6 +41,7 @@ def build_default_ingestion_service() -> IngestionService:
         tagger=_build_default_tagger(query_normalizer=query_normalizer),
         embedding_service=HashingEmbeddingService(),
         query_normalizer=query_normalizer,
+        progress_reporter=progress_reporter,
     )
 
 

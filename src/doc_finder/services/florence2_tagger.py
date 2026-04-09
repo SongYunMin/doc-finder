@@ -1,11 +1,49 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from io import BytesIO
 from pathlib import Path
-from typing import Any
+import re
 
 from doc_finder.services.query_normalizer import QueryNormalizer
 from doc_finder.services.tagging_service import TaggingError, TaggingResult, clean_tag_candidates
+
+_CAPTION_STOP_PREFIXES = (
+    "the image",
+    "this image",
+    "the photo",
+    "photo of",
+    "the scene",
+    "with the",
+    "showing",
+    "shows",
+    "there is",
+    "there are",
+    "giving it",
+)
+
+_CAPTION_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "at",
+    "bottom",
+    "classic",
+    "feel",
+    "giving",
+    "image",
+    "in",
+    "is",
+    "it",
+    "night",
+    "of",
+    "photo",
+    "shows",
+    "the",
+    "timeless",
+    "visible",
+    "with",
+}
 
 
 class Florence2VisionTagger:
@@ -102,10 +140,10 @@ class Florence2VisionTagger:
             caption_text = ""
 
         raw_candidates = []
-        for chunk in str(caption_text).replace("\n", ",").split(","):
+        for chunk in re.split(r"[,;\n\.]+", str(caption_text)):
             cleaned = chunk.strip()
             if cleaned:
-                raw_candidates.append(cleaned)
+                raw_candidates.extend(self._normalize_caption_chunk(cleaned))
         return clean_tag_candidates(raw_candidates)
 
     def _build_normalized_tags(self, keyword_tags: list[str]) -> list[str]:
@@ -129,6 +167,28 @@ class Florence2VisionTagger:
             confidence += 0.10
         return round(min(confidence, 0.95), 2)
 
+    def _normalize_caption_chunk(self, chunk: str) -> list[str]:
+        lowered = " ".join(chunk.lower().split())
+        if not lowered:
+            return []
+
+        if self._looks_like_object_phrase(lowered):
+            return [lowered]
+
+        tokens = [
+            token
+            for token in re.findall(r"[a-z0-9가-힣]+", lowered)
+            if token not in _CAPTION_STOPWORDS and len(token) >= 3
+        ]
+        return tokens[:4]
+
+    def _looks_like_object_phrase(self, chunk: str) -> bool:
+        if any(chunk.startswith(prefix) for prefix in _CAPTION_STOP_PREFIXES):
+            return False
+        if len(chunk.split()) > 3:
+            return False
+        return True
+
 
 def _run_florence_prompt(
     *,
@@ -141,10 +201,9 @@ def _run_florence_prompt(
     max_new_tokens: int,
     num_beams: int,
 ) -> object:
-    from PIL import Image
     import torch
 
-    image = Image.open(asset_path).convert("RGB")
+    image = _load_image_as_rgb(asset_path)
     inputs = processor(text=task_prompt, images=image, return_tensors="pt")
     input_ids = inputs["input_ids"].to(device)
     pixel_values = inputs["pixel_values"].to(device, getattr(torch, torch_dtype))
@@ -162,3 +221,20 @@ def _run_florence_prompt(
         task=task_prompt,
         image_size=(image.width, image.height),
     )
+
+
+def _load_image_as_rgb(asset_path: Path):
+    from PIL import Image
+
+    if asset_path.suffix.lower() == ".svg":
+        try:
+            import cairosvg
+        except ImportError as exc:
+            raise TaggingError(
+                "SVG tagging requires cairosvg to rasterize vector images."
+            ) from exc
+
+        png_bytes = cairosvg.svg2png(bytestring=asset_path.read_bytes())
+        return Image.open(BytesIO(png_bytes)).convert("RGB")
+
+    return Image.open(asset_path).convert("RGB")

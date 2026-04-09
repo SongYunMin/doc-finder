@@ -6,7 +6,7 @@ import re
 
 
 _FILENAME_PATTERN = re.compile(
-    r"^(?P<unit_id>\d+)_(?P<data_id>\d+)_(?P<image_id>\d+)\.(?P<extension>png|svg)$",
+    r"^(?P<unit_id>\d+)_(?P<data_id>\d+)(?:_(?P<image_id>\d+))?\.(?P<extension>png|svg)$",
     re.IGNORECASE,
 )
 
@@ -29,13 +29,13 @@ def parse_asset_filename(path_or_name: str | Path) -> ParsedAssetFilename:
     match = _FILENAME_PATTERN.match(original_name)
     if match is None:
         raise FilenameParseError(
-            "Asset filename must match <unitId>_<dataId>_<imageOrder>.(png|svg)."
+            "Asset filename must match <unitId>_<dataId>[ _<imageOrder>].(png|svg)."
         )
 
     return ParsedAssetFilename(
         unit_id=int(match.group("unit_id")),
         data_id=int(match.group("data_id")),
-        image_id=int(match.group("image_id")),
+        image_id=int(match.group("image_id") or 1),
         extension=match.group("extension").lower(),
         original_name=original_name,
     )
