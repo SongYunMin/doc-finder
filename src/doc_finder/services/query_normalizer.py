@@ -40,3 +40,20 @@ class QueryNormalizer:
     def normalize_tag(self, tag: str) -> str:
         cleaned_tag = " ".join(tag.split()).casefold()
         return self._synonyms.get(cleaned_tag, cleaned_tag)
+
+    def normalize_tag_candidates(self, tag: str) -> list[str]:
+        cleaned_tag = " ".join(tag.split()).casefold()
+        direct_match = self._synonyms.get(cleaned_tag)
+        if direct_match:
+            return [direct_match]
+
+        normalized_tokens = []
+        for token in cleaned_tag.replace(",", " ").split():
+            mapped = self._synonyms.get(token)
+            if mapped:
+                normalized_tokens.append(mapped)
+
+        if normalized_tokens:
+            return sorted(dict.fromkeys(normalized_tokens))
+
+        return [cleaned_tag]

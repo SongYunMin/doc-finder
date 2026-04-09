@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import base64
 import json
+import string
 import urllib.request
 
 
@@ -17,6 +18,26 @@ class TaggingResult:
     normalized_tags: list[str]
     confidence: float
     review_status: str = "approved"
+
+
+def clean_tag_candidates(candidates: list[str], max_tags: int | None = None) -> list[str]:
+    cleaned_candidates: list[str] = []
+    seen: set[str] = set()
+
+    for candidate in candidates:
+        cleaned = " ".join(candidate.strip().lower().split())
+        if not cleaned:
+            continue
+        if all(char in string.punctuation for char in cleaned):
+            continue
+        if cleaned in seen:
+            continue
+        seen.add(cleaned)
+        cleaned_candidates.append(cleaned)
+        if max_tags is not None and len(cleaned_candidates) >= max_tags:
+            break
+
+    return cleaned_candidates
 
 
 class StaticVisionTagger:
@@ -67,8 +88,10 @@ class HttpVisionTagger:
             raise TaggingError(f"Vision tagging failed for {asset_path.name}.") from exc
 
         return TaggingResult(
-            keyword_tags=list(data["keyword_tags"]),
-            normalized_tags=list(data.get("normalized_tags", data["keyword_tags"])),
+            keyword_tags=clean_tag_candidates(list(data["keyword_tags"])),
+            normalized_tags=clean_tag_candidates(
+                list(data.get("normalized_tags", data["keyword_tags"]))
+            ),
             confidence=float(data["confidence"]),
             review_status=str(data.get("review_status", "approved")),
         )

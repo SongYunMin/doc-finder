@@ -2,7 +2,9 @@ from pathlib import Path
 
 from doc_finder.repositories.image_index import InMemoryImageIndexRepository
 from doc_finder.services.embedding_service import HashingEmbeddingService
+from doc_finder.services.florence2_tagger import Florence2VisionTagger
 from doc_finder.services.ingestion_service import IngestionService
+from doc_finder.services.query_normalizer import QueryNormalizer
 from doc_finder.services.tagging_service import StaticVisionTagger, TaggingResult
 
 
@@ -105,3 +107,33 @@ def test_ingestion_service_deduplicates_reingested_file_by_sha256(
     assert first.indexed_count == 1
     assert second.duplicate_count == 1
     assert len(repository.all_documents()) == 1
+
+
+def test_ingestion_service_indexes_tags_from_florence2_provider(tmp_path: Path) -> None:
+    image = tmp_path / "10565_20077_1.svg"
+    _write_svg(image, "apple")
+
+    repository = InMemoryImageIndexRepository()
+    tagger = Florence2VisionTagger(
+        model_id="microsoft/Florence-2-base",
+        device="cpu",
+        torch_dtype="float32",
+        query_normalizer=QueryNormalizer(),
+        prompt_runner=lambda task_prompt, asset_path: {
+            "<OD>": {"<OD>": {"labels": ["apple"]}},
+            "<DETAILED_CAPTION>": {"<DETAILED_CAPTION>": "red apple"},
+        }[task_prompt],
+    )
+    service = IngestionService(
+        repository=repository,
+        tagger=tagger,
+        embedding_service=HashingEmbeddingService(),
+    )
+
+    summary = service.ingest_directory(tmp_path)
+
+    assert summary.indexed_count == 1
+    document = repository.all_documents()[0]
+    assert document.keyword_tags == ["apple", "red apple"]
+    assert document.normalized_tags == ["사과"]
+    assert document.review_status == "approved"

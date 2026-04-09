@@ -9,6 +9,7 @@ from doc_finder.repositories.image_index import (
     PostgresImageIndexRepository,
 )
 from doc_finder.services.embedding_service import HashingEmbeddingService
+from doc_finder.services.florence2_tagger import Florence2VisionTagger
 from doc_finder.services.ingestion_service import IngestionService
 from doc_finder.services.query_normalizer import QueryNormalizer
 from doc_finder.services.search_service import SearchService
@@ -33,16 +34,18 @@ def build_default_search_service() -> SearchService:
 
 
 def build_default_ingestion_service() -> IngestionService:
+    query_normalizer = QueryNormalizer()
     repository = build_default_repository()
     return IngestionService(
         repository=repository,
-        tagger=_build_default_tagger(),
+        tagger=_build_default_tagger(query_normalizer=query_normalizer),
         embedding_service=HashingEmbeddingService(),
-        query_normalizer=QueryNormalizer(),
+        query_normalizer=query_normalizer,
     )
 
 
-def _build_default_tagger():
+def _build_default_tagger(query_normalizer: QueryNormalizer | None = None):
+    query_normalizer = query_normalizer or QueryNormalizer()
     provider = os.getenv("DOC_FINDER_TAGGER_PROVIDER", "http").casefold()
     if provider == "http":
         # 운영 기본 경로는 외부 비전 태거를 호출하는 HTTP 어댑터다.
@@ -76,4 +79,33 @@ def _build_default_tagger():
             }
         )
 
+    if provider == "florence2":
+        model_id = os.getenv("DOC_FINDER_FLORENCE2_MODEL_ID", "microsoft/Florence-2-base")
+        device = os.getenv("DOC_FINDER_FLORENCE2_DEVICE", _default_florence2_device())
+        torch_dtype = os.getenv(
+            "DOC_FINDER_FLORENCE2_TORCH_DTYPE",
+            "float16" if device == "cuda" else "float32",
+        )
+        return Florence2VisionTagger(
+            model_id=model_id,
+            device=device,
+            torch_dtype=torch_dtype,
+            query_normalizer=query_normalizer,
+            max_new_tokens=int(os.getenv("DOC_FINDER_FLORENCE2_MAX_NEW_TOKENS", "512")),
+            num_beams=int(os.getenv("DOC_FINDER_FLORENCE2_NUM_BEAMS", "3")),
+        )
+
     raise ValueError(f"Unsupported tagger provider: {provider}")
+
+
+def _default_florence2_device() -> str:
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return "cuda"
+        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            return "mps"
+    except Exception:  # noqa: BLE001
+        pass
+    return "cpu"

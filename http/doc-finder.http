@@ -4,6 +4,9 @@
 GET {{baseUrl}}/health
 Accept: application/json
 
+### Note
+# Florence-2 로컬 태거로 ingest를 먼저 실행한 뒤 검색해야 결과가 나온다.
+
 ### Tag Search
 POST {{baseUrl}}/search/by-tags
 Content-Type: application/json
