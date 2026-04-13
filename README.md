@@ -84,7 +84,7 @@ set +a
 ```dotenv
 DOC_FINDER_DATABASE_URL=postgresql://postgres:postgres@localhost:5431/doc_finder
 DOC_FINDER_TAGGER_PROVIDER=florence2
-DOC_FINDER_FLORENCE2_MODEL_ID=microsoft/Florence-2-base
+DOC_FINDER_FLORENCE2_MODEL_ID=microsoft/Florence-2-large
 DOC_FINDER_FLORENCE2_DEVICE=cpu
 DOC_FINDER_FLORENCE2_TORCH_DTYPE=float32
 DOC_FINDER_FLORENCE2_MAX_NEW_TOKENS=512
@@ -96,7 +96,7 @@ DOC_FINDER_FLORENCE2_NUM_BEAMS=3
 ```dotenv
 DOC_FINDER_DATABASE_URL=postgresql://postgres:postgres@localhost:5431/doc_finder
 DOC_FINDER_TAGGER_PROVIDER=static
-DOC_FINDER_STATIC_TAGS=/Users/knowre-yunmin/doc-finder/assets/tag/static-tags.json
+DOC_FINDER_STATIC_TAGS=/Users/knowre-yunmin/doc-finder/static-tags.json
 ```
 
 ## Run CLI search
@@ -108,7 +108,7 @@ python -m doc_finder.cli search --query "apple" --top-k 5
 ## Run CLI ingestion
 
 ```bash
-python -m doc_finder.cli ingest --image-dir ./assets/img
+python -m doc_finder.cli ingest --image-dir ./images
 ```
 
 Florence-2 로컬 태거 예시:
@@ -118,7 +118,7 @@ set -a
 source .env
 set +a
 
-python -m doc_finder.cli ingest --image-dir /absolute/path/to/assets
+python -m doc_finder.cli ingest --image-dir /absolute/path/to/images
 python -m doc_finder.cli search --query "사과" --top-k 5
 ```
 

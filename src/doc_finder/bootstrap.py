@@ -8,8 +8,8 @@ from doc_finder.repositories.image_index import (
     InMemoryImageIndexRepository,
     PostgresImageIndexRepository,
 )
+from doc_finder.models.florence_2 import Florence2VisionTagger
 from doc_finder.services.embedding_service import HashingEmbeddingService
-from doc_finder.services.florence2_tagger import Florence2VisionTagger
 from doc_finder.services.ingestion_service import IngestionService
 from doc_finder.services.query_normalizer import QueryNormalizer
 from doc_finder.services.search_service import SearchService
@@ -81,7 +81,7 @@ def _build_default_tagger(query_normalizer: QueryNormalizer | None = None):
         )
 
     if provider == "florence2":
-        model_id = os.getenv("DOC_FINDER_FLORENCE2_MODEL_ID", "microsoft/Florence-2-base")
+        model_id = os.getenv("DOC_FINDER_FLORENCE2_MODEL_ID", "microsoft/Florence-2-large")
         device = os.getenv("DOC_FINDER_FLORENCE2_DEVICE", _default_florence2_device())
         torch_dtype = os.getenv(
             "DOC_FINDER_FLORENCE2_TORCH_DTYPE",

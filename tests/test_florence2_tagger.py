@@ -16,6 +16,22 @@ class _StubFlorenceRunner:
         return self.responses[task_prompt]
 
 
+def test_florence2_tagger_is_available_from_model_namespace() -> None:
+    from doc_finder.models.florence_2 import Florence2VisionTagger
+
+    assert Florence2VisionTagger.__name__ == "Florence2VisionTagger"
+    assert Florence2VisionTagger.__module__ == "doc_finder.models.florence_2.tagger"
+
+
+def test_legacy_service_module_reexports_model_namespace_class() -> None:
+    from doc_finder.models.florence_2 import Florence2VisionTagger as NamespaceTagger
+    from doc_finder.models.florence_2 import Florence2VisionTagger as PackageTagger
+    from doc_finder.services.florence2_tagger import Florence2VisionTagger as LegacyTagger
+
+    assert PackageTagger is NamespaceTagger
+    assert LegacyTagger is NamespaceTagger
+
+
 def test_build_default_tagger_supports_florence2_provider(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
@@ -37,8 +53,29 @@ def test_build_default_tagger_supports_florence2_provider(monkeypatch) -> None:
     assert captured["torch_dtype"] == "float32"
 
 
+def test_build_default_tagger_uses_florence2_large_as_default_model(
+    monkeypatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    class _FakeFlorence2VisionTagger:
+        def __init__(self, **kwargs) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setenv("DOC_FINDER_TAGGER_PROVIDER", "florence2")
+    monkeypatch.delenv("DOC_FINDER_FLORENCE2_MODEL_ID", raising=False)
+    monkeypatch.setenv("DOC_FINDER_FLORENCE2_DEVICE", "cpu")
+    monkeypatch.setenv("DOC_FINDER_FLORENCE2_TORCH_DTYPE", "float32")
+    monkeypatch.setattr(bootstrap, "Florence2VisionTagger", _FakeFlorence2VisionTagger)
+
+    tagger = bootstrap._build_default_tagger()
+
+    assert isinstance(tagger, _FakeFlorence2VisionTagger)
+    assert captured["model_id"] == "microsoft/Florence-2-large"
+
+
 def test_florence2_tagger_merges_od_and_caption_results_into_keyword_tags() -> None:
-    from doc_finder.services.florence2_tagger import Florence2VisionTagger
+    from doc_finder.models.florence_2 import Florence2VisionTagger
 
     tagger = Florence2VisionTagger(
         model_id="microsoft/Florence-2-base",
@@ -48,7 +85,7 @@ def test_florence2_tagger_merges_od_and_caption_results_into_keyword_tags() -> N
         prompt_runner=_StubFlorenceRunner(
             {
                 "<OD>": {"<OD>": {"labels": ["apple", "apple", "bus"]}},
-                "<DETAILED_CAPTION>": {"<DETAILED_CAPTION>": "red apple, school bus, apple"},
+                "<CAPTION>": {"<CAPTION>": "red apple, school bus, apple"},
             }
         ),
     )
@@ -62,7 +99,7 @@ def test_florence2_tagger_merges_od_and_caption_results_into_keyword_tags() -> N
 
 
 def test_florence2_tagger_marks_low_evidence_result_as_pending() -> None:
-    from doc_finder.services.florence2_tagger import Florence2VisionTagger
+    from doc_finder.models.florence_2 import Florence2VisionTagger
 
     tagger = Florence2VisionTagger(
         model_id="microsoft/Florence-2-base",
@@ -72,7 +109,7 @@ def test_florence2_tagger_marks_low_evidence_result_as_pending() -> None:
         prompt_runner=_StubFlorenceRunner(
             {
                 "<OD>": {"<OD>": {"labels": []}},
-                "<DETAILED_CAPTION>": {"<DETAILED_CAPTION>": "tiny object"},
+                "<CAPTION>": {"<CAPTION>": "tiny object"},
             }
         ),
     )
@@ -86,7 +123,7 @@ def test_florence2_tagger_marks_low_evidence_result_as_pending() -> None:
 
 
 def test_florence2_tagger_reduces_sentence_like_caption_to_object_tokens() -> None:
-    from doc_finder.services.florence2_tagger import Florence2VisionTagger
+    from doc_finder.models.florence_2 import Florence2VisionTagger
 
     tagger = Florence2VisionTagger(
         model_id="microsoft/Florence-2-base",
@@ -96,8 +133,8 @@ def test_florence2_tagger_reduces_sentence_like_caption_to_object_tokens() -> No
         prompt_runner=_StubFlorenceRunner(
             {
                 "<OD>": {"<OD>": {"labels": []}},
-                "<DETAILED_CAPTION>": {
-                    "<DETAILED_CAPTION>": (
+                "<CAPTION>": {
+                    "<CAPTION>": (
                         "the image shows a person in a wheelchair at night, "
                         "with the grass visible at the bottom."
                     )
@@ -114,7 +151,7 @@ def test_florence2_tagger_reduces_sentence_like_caption_to_object_tokens() -> No
 
 
 def test_florence2_model_loader_uses_torch_dtype_keyword(monkeypatch) -> None:
-    from doc_finder.services.florence2_tagger import Florence2VisionTagger
+    from doc_finder.models.florence_2 import Florence2VisionTagger
 
     captured: dict[str, object] = {}
 
@@ -171,7 +208,7 @@ def test_florence2_model_loader_uses_torch_dtype_keyword(monkeypatch) -> None:
 
 def test_load_image_as_rgb_supports_svg(monkeypatch, tmp_path: Path) -> None:
     from PIL import Image
-    from doc_finder.services.florence2_tagger import _load_image_as_rgb
+    from doc_finder.models.florence_2 import _load_image_as_rgb
 
     svg_path = tmp_path / "10565_20077_1.svg"
     svg_path.write_text(
