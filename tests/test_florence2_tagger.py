@@ -34,6 +34,7 @@ def test_legacy_service_module_reexports_model_namespace_class() -> None:
 
 def test_build_default_tagger_supports_florence2_provider(monkeypatch) -> None:
     captured: dict[str, object] = {}
+    from doc_finder.taggers.providers import florence2 as florence2_provider
 
     class _FakeFlorence2VisionTagger:
         def __init__(self, **kwargs) -> None:
@@ -43,7 +44,11 @@ def test_build_default_tagger_supports_florence2_provider(monkeypatch) -> None:
     monkeypatch.setenv("DOC_FINDER_FLORENCE2_MODEL_ID", "microsoft/Florence-2-base")
     monkeypatch.setenv("DOC_FINDER_FLORENCE2_DEVICE", "cpu")
     monkeypatch.setenv("DOC_FINDER_FLORENCE2_TORCH_DTYPE", "float32")
-    monkeypatch.setattr(bootstrap, "Florence2VisionTagger", _FakeFlorence2VisionTagger)
+    monkeypatch.setattr(
+        florence2_provider,
+        "Florence2VisionTagger",
+        _FakeFlorence2VisionTagger,
+    )
 
     tagger = bootstrap._build_default_tagger()
 
@@ -57,6 +62,7 @@ def test_build_default_tagger_uses_florence2_large_as_default_model(
     monkeypatch,
 ) -> None:
     captured: dict[str, object] = {}
+    from doc_finder.taggers.providers import florence2 as florence2_provider
 
     class _FakeFlorence2VisionTagger:
         def __init__(self, **kwargs) -> None:
@@ -66,7 +72,11 @@ def test_build_default_tagger_uses_florence2_large_as_default_model(
     monkeypatch.delenv("DOC_FINDER_FLORENCE2_MODEL_ID", raising=False)
     monkeypatch.setenv("DOC_FINDER_FLORENCE2_DEVICE", "cpu")
     monkeypatch.setenv("DOC_FINDER_FLORENCE2_TORCH_DTYPE", "float32")
-    monkeypatch.setattr(bootstrap, "Florence2VisionTagger", _FakeFlorence2VisionTagger)
+    monkeypatch.setattr(
+        florence2_provider,
+        "Florence2VisionTagger",
+        _FakeFlorence2VisionTagger,
+    )
 
     tagger = bootstrap._build_default_tagger()
 

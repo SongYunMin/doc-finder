@@ -1,10 +1,8 @@
 from pathlib import Path
 
 from doc_finder.repositories.image_index import InMemoryImageIndexRepository
-from doc_finder.models.florence_2 import Florence2VisionTagger
 from doc_finder.services.embedding_service import HashingEmbeddingService
 from doc_finder.services.ingestion_service import IngestionService
-from doc_finder.services.query_normalizer import QueryNormalizer
 from doc_finder.services.tagging_service import StaticVisionTagger, TaggingResult
 
 
@@ -17,6 +15,15 @@ def _write_svg(path: Path, label: str) -> None:
         ),
         encoding="utf-8",
     )
+
+
+class _ScriptedVisionTagger:
+    def __init__(self, result: TaggingResult) -> None:
+        self._result = result
+
+    def tag(self, asset_path: Path, sha256: str) -> TaggingResult:
+        del asset_path, sha256
+        return self._result
 
 
 def test_ingestion_service_indexes_multiple_images_for_same_unit_and_data(
@@ -109,20 +116,17 @@ def test_ingestion_service_deduplicates_reingested_file_by_sha256(
     assert len(repository.all_documents()) == 1
 
 
-def test_ingestion_service_indexes_tags_from_florence2_provider(tmp_path: Path) -> None:
+def test_ingestion_service_indexes_tags_from_generic_tagger_contract(tmp_path: Path) -> None:
     image = tmp_path / "10565_20077_1.svg"
     _write_svg(image, "apple")
 
     repository = InMemoryImageIndexRepository()
-    tagger = Florence2VisionTagger(
-        model_id="microsoft/Florence-2-base",
-        device="cpu",
-        torch_dtype="float32",
-        query_normalizer=QueryNormalizer(),
-        prompt_runner=lambda task_prompt, asset_path: {
-            "<OD>": {"<OD>": {"labels": ["apple"]}},
-            "<CAPTION>": {"<CAPTION>": "red apple"},
-        }[task_prompt],
+    tagger = _ScriptedVisionTagger(
+        TaggingResult(
+            keyword_tags=["apple", "red apple"],
+            normalized_tags=["사과"],
+            confidence=0.95,
+        )
     )
     service = IngestionService(
         repository=repository,

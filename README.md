@@ -68,6 +68,10 @@ curl -X POST http://127.0.0.1:8000/search/by-tags \
 - `http`: 외부 비전 API가 태그를 생성해 반환한다.
 - `florence2`: 로컬 Florence-2 모델을 직접 로드해 태그를 생성한다.
 
+provider 선택과 환경변수 해석은 `src/doc_finder/taggers/` 아래 registry에서 처리한다.
+새 로컬 모델을 붙일 때는 `src/doc_finder/taggers/providers/` 아래에 provider 모듈을 추가하면 되고,
+`ingestion` 계층은 `TaggingResult` 계약만 유지하면 된다.
+
 ## Environment setup
 
 `.env.example`을 복사해 `.env`를 만들고, 실행 전에 로드한다.

@@ -5,6 +5,7 @@ from pathlib import Path
 import base64
 import json
 import string
+from typing import Protocol
 import urllib.request
 
 
@@ -18,6 +19,11 @@ class TaggingResult:
     normalized_tags: list[str]
     confidence: float
     review_status: str = "approved"
+
+
+class VisionTagger(Protocol):
+    def tag(self, asset_path: Path, sha256: str) -> TaggingResult:
+        """이미지 자산을 검색용 태그 계약으로 변환한다."""
 
 
 def clean_tag_candidates(candidates: list[str], max_tags: int | None = None) -> list[str]:
