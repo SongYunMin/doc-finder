@@ -45,3 +45,9 @@ def test_build_default_ingestion_service_uses_generic_tagger_builder(monkeypatch
 
     assert service._tagger is fake_tagger
     assert isinstance(captured["query_normalizer"], QueryNormalizer)
+
+
+def test_available_tagger_providers_includes_paligemma2() -> None:
+    from doc_finder.taggers import available_tagger_providers
+
+    assert "paligemma2" in available_tagger_providers()

@@ -23,6 +23,16 @@ def test_florence2_tagger_is_available_from_model_namespace() -> None:
     assert Florence2VisionTagger.__module__ == "doc_finder.models.florence_2.tagger"
 
 
+def test_florence2_large_ft_tagger_is_available_from_model_namespace() -> None:
+    from doc_finder.models.florence_2_large_ft import Florence2LargeFtVisionTagger
+
+    assert Florence2LargeFtVisionTagger.__name__ == "Florence2LargeFtVisionTagger"
+    assert (
+        Florence2LargeFtVisionTagger.__module__
+        == "doc_finder.models.florence_2_large_ft.tagger"
+    )
+
+
 def test_legacy_service_module_reexports_model_namespace_class() -> None:
     from doc_finder.models.florence_2 import Florence2VisionTagger as NamespaceTagger
     from doc_finder.models.florence_2 import Florence2VisionTagger as PackageTagger
@@ -82,6 +92,30 @@ def test_build_default_tagger_uses_florence2_large_as_default_model(
 
     assert isinstance(tagger, _FakeFlorence2VisionTagger)
     assert captured["model_id"] == "microsoft/Florence-2-large"
+
+
+def test_build_default_tagger_supports_florence2_large_ft_provider(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+    from doc_finder.taggers.providers import florence2_large_ft as florence2_large_ft_provider
+
+    class _FakeFlorence2LargeFtVisionTagger:
+        def __init__(self, **kwargs) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setenv("DOC_FINDER_TAGGER_PROVIDER", "florence2-large-ft")
+    monkeypatch.setenv("DOC_FINDER_FLORENCE2_DEVICE", "cpu")
+    monkeypatch.setenv("DOC_FINDER_FLORENCE2_TORCH_DTYPE", "float32")
+    monkeypatch.setattr(
+        florence2_large_ft_provider,
+        "Florence2LargeFtVisionTagger",
+        _FakeFlorence2LargeFtVisionTagger,
+    )
+
+    tagger = bootstrap._build_default_tagger()
+
+    assert isinstance(tagger, _FakeFlorence2LargeFtVisionTagger)
+    assert captured["device"] == "cpu"
+    assert captured["torch_dtype"] == "float32"
 
 
 def test_florence2_tagger_merges_od_and_caption_results_into_keyword_tags() -> None:

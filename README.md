@@ -67,6 +67,7 @@ curl -X POST http://127.0.0.1:8000/search/by-tags \
 - `static`: 정적 JSON 파일에 적어둔 태그를 그대로 사용한다. 로컬 스모크 테스트에 적합하다.
 - `http`: 외부 비전 API가 태그를 생성해 반환한다.
 - `florence2`: 로컬 Florence-2 모델을 직접 로드해 태그를 생성한다.
+- `paligemma2`: 로컬 PaliGemma 2 mix 모델을 직접 로드해 태그를 생성한다.
 
 provider 선택과 환경변수 해석은 `src/doc_finder/taggers/` 아래 registry에서 처리한다.
 새 로컬 모델을 붙일 때는 `src/doc_finder/taggers/providers/` 아래에 provider 모듈을 추가하면 되고,
@@ -93,6 +94,17 @@ DOC_FINDER_FLORENCE2_DEVICE=cpu
 DOC_FINDER_FLORENCE2_TORCH_DTYPE=float32
 DOC_FINDER_FLORENCE2_MAX_NEW_TOKENS=512
 DOC_FINDER_FLORENCE2_NUM_BEAMS=3
+```
+
+### PaliGemma 2 example
+
+```dotenv
+DOC_FINDER_DATABASE_URL=postgresql://postgres:postgres@localhost:5431/doc_finder
+DOC_FINDER_TAGGER_PROVIDER=paligemma2
+DOC_FINDER_PALIGEMMA2_MODEL_ID=google/paligemma2-3b-mix-448
+DOC_FINDER_PALIGEMMA2_DEVICE=cpu
+DOC_FINDER_PALIGEMMA2_TORCH_DTYPE=float32
+DOC_FINDER_PALIGEMMA2_MAX_NEW_TOKENS=128
 ```
 
 ### Static example
@@ -133,9 +145,21 @@ candidate 예시:
 ```bash
 python -m doc_finder.cli tag \
   --image-dir ./images \
-  --tagger-provider florence2 \
-  --florence2-model-id microsoft/Florence-2-large-ft
+  --tagger-provider florence2-large-ft
 ```
+
+PaliGemma 2 preview 예시:
+
+```bash
+python -m doc_finder.cli tag \
+  --image-dir ./images \
+  --tagger-provider paligemma2 \
+  --paligemma2-model-id google/paligemma2-3b-mix-448
+```
+
+주의:
+- `google/paligemma2-3b-mix-448`는 Hugging Face gated repo일 수 있다.
+- 이 경우 모델 페이지 접근 권한과 `HF_TOKEN` 인증이 먼저 필요하다.
 
 Florence-2 로컬 태거 예시:
 

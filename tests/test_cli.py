@@ -136,3 +136,67 @@ def test_cli_tag_prefers_model_id_flag_over_env(monkeypatch, tmp_path: Path) -> 
     assert captured["provider"] == "florence2"
     assert environ["DOC_FINDER_TAGGER_PROVIDER"] == "florence2"
     assert environ["DOC_FINDER_FLORENCE2_MODEL_ID"] == "microsoft/Florence-2-large-ft"
+
+
+def test_cli_tag_supports_florence2_large_ft_provider(monkeypatch, tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_build_tagger(provider, **kwargs):
+        captured["provider"] = provider
+        captured["environ"] = kwargs["environ"]
+        return object()
+
+    monkeypatch.setattr(cli_module, "build_tagger", _fake_build_tagger)
+    monkeypatch.setattr(
+        cli_module,
+        "TagPreviewService",
+        lambda tagger: _StubTagPreviewService(),
+    )
+
+    cli_module.main(
+        [
+            "tag",
+            "--image-dir",
+            str(tmp_path),
+            "--tagger-provider",
+            "florence2-large-ft",
+        ]
+    )
+
+    environ = captured["environ"]
+    assert captured["provider"] == "florence2-large-ft"
+    assert environ["DOC_FINDER_TAGGER_PROVIDER"] == "florence2-large-ft"
+
+
+def test_cli_tag_prefers_paligemma2_model_id_flag_over_env(monkeypatch, tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def _fake_build_tagger(provider, **kwargs):
+        captured["provider"] = provider
+        captured["environ"] = kwargs["environ"]
+        return object()
+
+    monkeypatch.setenv("DOC_FINDER_PALIGEMMA2_MODEL_ID", "google/paligemma2-3b-mix-224")
+    monkeypatch.setattr(cli_module, "build_tagger", _fake_build_tagger)
+    monkeypatch.setattr(
+        cli_module,
+        "TagPreviewService",
+        lambda tagger: _StubTagPreviewService(),
+    )
+
+    cli_module.main(
+        [
+            "tag",
+            "--image-dir",
+            str(tmp_path),
+            "--tagger-provider",
+            "paligemma2",
+            "--paligemma2-model-id",
+            "google/paligemma2-3b-mix-448",
+        ]
+    )
+
+    environ = captured["environ"]
+    assert captured["provider"] == "paligemma2"
+    assert environ["DOC_FINDER_TAGGER_PROVIDER"] == "paligemma2"
+    assert environ["DOC_FINDER_PALIGEMMA2_MODEL_ID"] == "google/paligemma2-3b-mix-448"

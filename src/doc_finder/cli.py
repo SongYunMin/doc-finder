@@ -59,6 +59,11 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="Optional Florence-2 model id override for preview runs.",
     )
+    tag_parser.add_argument(
+        "--paligemma2-model-id",
+        default=None,
+        help="Optional PaliGemma 2 model id override for preview runs.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -81,6 +86,8 @@ def main(argv: list[str] | None = None) -> None:
         runtime_environ["DOC_FINDER_TAGGER_PROVIDER"] = args.tagger_provider
         if args.florence2_model_id is not None:
             runtime_environ["DOC_FINDER_FLORENCE2_MODEL_ID"] = args.florence2_model_id
+        if args.paligemma2_model_id is not None:
+            runtime_environ["DOC_FINDER_PALIGEMMA2_MODEL_ID"] = args.paligemma2_model_id
 
         tagger = build_tagger(
             args.tagger_provider,
