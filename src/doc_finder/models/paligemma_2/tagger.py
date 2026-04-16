@@ -202,7 +202,8 @@ def _run_paligemma_prompt(
     import torch
 
     image = _load_image_as_rgb(asset_path)
-    inputs = processor(images=image, text=task_prompt, return_tensors="pt")
+    formatted_prompt = _format_paligemma_prompt(task_prompt)
+    inputs = processor(images=image, text=formatted_prompt, return_tensors="pt")
     prepared_inputs = {}
     for key, value in inputs.items():
         if key == "pixel_values":
@@ -218,3 +219,12 @@ def _run_paligemma_prompt(
     input_length = prepared_inputs["input_ids"].shape[-1]
     generated_tokens = generated_ids[:, input_length:]
     return processor.decode(generated_tokens[0], skip_special_tokens=True).strip()
+
+
+def _format_paligemma_prompt(task_prompt: str) -> str:
+    """PaliGemma processor가 기대하는 `<image>` 토큰을 프롬프트 선두에 보장한다."""
+
+    normalized_prompt = task_prompt.lstrip()
+    if normalized_prompt.startswith("<image>"):
+        return normalized_prompt
+    return f"<image>{normalized_prompt}"

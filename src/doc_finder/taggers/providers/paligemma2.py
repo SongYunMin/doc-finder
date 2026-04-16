@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 from doc_finder.models.paligemma_2 import PaliGemma2VisionTagger
 from doc_finder.services.query_normalizer import QueryNormalizer
+from doc_finder.taggers.providers import _detect_torch_device
 from doc_finder.taggers.registry import register_tagger_provider
 
 
@@ -14,7 +15,7 @@ def build_paligemma2_tagger(
 ):
     """PaliGemma 2 provider의 환경변수 해석을 한 곳으로 모은다."""
 
-    device = environ.get("DOC_FINDER_PALIGEMMA2_DEVICE", _default_paligemma2_device())
+    device = environ.get("DOC_FINDER_PALIGEMMA2_DEVICE", _detect_torch_device())
     torch_dtype = environ.get(
         "DOC_FINDER_PALIGEMMA2_TORCH_DTYPE",
         "float16" if device == "cuda" else "float32",
@@ -29,19 +30,6 @@ def build_paligemma2_tagger(
         query_normalizer=query_normalizer,
         max_new_tokens=int(environ.get("DOC_FINDER_PALIGEMMA2_MAX_NEW_TOKENS", "128")),
     )
-
-
-def _default_paligemma2_device() -> str:
-    try:
-        import torch
-
-        if torch.cuda.is_available():
-            return "cuda"
-        if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            return "mps"
-    except Exception:  # noqa: BLE001
-        pass
-    return "cpu"
 
 
 register_tagger_provider("paligemma2", build_paligemma2_tagger)

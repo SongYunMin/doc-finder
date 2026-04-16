@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 from doc_finder.models.florence_2_large_ft import Florence2LargeFtVisionTagger
 from doc_finder.services.query_normalizer import QueryNormalizer
-from doc_finder.taggers.providers.florence2 import _default_florence2_device
+from doc_finder.taggers.providers import _detect_torch_device
 from doc_finder.taggers.registry import register_tagger_provider
 
 
@@ -13,7 +13,7 @@ def build_florence2_large_ft_tagger(
     query_normalizer: QueryNormalizer,
     environ: Mapping[str, str],
 ):
-    device = environ.get("DOC_FINDER_FLORENCE2_DEVICE", _default_florence2_device())
+    device = environ.get("DOC_FINDER_FLORENCE2_DEVICE", _detect_torch_device())
     torch_dtype = environ.get(
         "DOC_FINDER_FLORENCE2_TORCH_DTYPE",
         "float16" if device == "cuda" else "float32",

@@ -183,6 +183,49 @@ def test_paligemma2_model_loader_uses_torch_dtype_keyword(monkeypatch) -> None:
     assert "dtype" not in captured["kwargs"]
 
 
+def test_run_paligemma_prompt_prefixes_image_token_in_text(tmp_path: Path) -> None:
+    import torch
+    from PIL import Image
+
+    from doc_finder.models.paligemma_2.tagger import _run_paligemma_prompt
+
+    image_path = tmp_path / "10565_20077_1.png"
+    Image.new("RGB", (8, 8), color="white").save(image_path)
+
+    captured: dict[str, object] = {}
+
+    class _FakeProcessor:
+        def __call__(self, *, images, text, return_tensors):
+            del images, return_tensors
+            captured["text"] = text
+            return {
+                "input_ids": torch.tensor([[1, 2, 3]]),
+                "pixel_values": torch.tensor([[[1.0]]]),
+            }
+
+        def decode(self, tokens, skip_special_tokens: bool = True):
+            del tokens, skip_special_tokens
+            return "apple"
+
+    class _FakeModel:
+        def generate(self, **kwargs):
+            del kwargs
+            return torch.tensor([[1, 2, 3, 4]])
+
+    result = _run_paligemma_prompt(
+        model=_FakeModel(),
+        processor=_FakeProcessor(),
+        task_prompt="describe en",
+        asset_path=image_path,
+        device="cpu",
+        torch_dtype="float32",
+        max_new_tokens=16,
+    )
+
+    assert result == "apple"
+    assert captured["text"] == "<image>describe en"
+
+
 def test_paligemma2_tagger_surfaces_gated_repo_error_with_actionable_hint(monkeypatch) -> None:
     from doc_finder.models.paligemma_2 import PaliGemma2VisionTagger
     from doc_finder.services.tagging_service import TaggingError
