@@ -6,7 +6,15 @@ import re
 
 from doc_finder.models.florence_2.tagger import _load_image_as_rgb
 from doc_finder.services.query_normalizer import QueryNormalizer
-from doc_finder.services.tagging_service import TaggingError, TaggingResult, clean_tag_candidates
+from doc_finder.services.tagging_service import (
+    TaggingError,
+    TaggingResult,
+    build_normalized_tags,
+    clean_tag_candidates,
+    compute_confidence,
+    looks_like_object_phrase,
+    normalize_text_chunk,
+)
 
 _DESCRIPTION_STOP_PREFIXES = (
     "the image",
@@ -130,10 +138,7 @@ class PaliGemma2VisionTagger:
         return clean_tag_candidates(candidates)
 
     def _build_normalized_tags(self, keyword_tags: list[str]) -> list[str]:
-        normalized_tags: list[str] = []
-        for tag in keyword_tags:
-            normalized_tags.extend(self._query_normalizer.normalize_tag_candidates(tag))
-        return clean_tag_candidates(normalized_tags)
+        return build_normalized_tags(keyword_tags, self._query_normalizer)
 
     def _compute_confidence(
         self,
@@ -141,38 +146,19 @@ class PaliGemma2VisionTagger:
         ocr_tags: list[str],
         normalized_tags: list[str],
     ) -> float:
-        # Florence와 같은 0.95 ceiling을 유지하되, describe/ocr 각각의 근거를 반영한다.
-        confidence = 0.45
-        if describe_tags:
-            confidence += 0.25
-        if ocr_tags:
-            confidence += 0.15
-        if normalized_tags and normalized_tags != clean_tag_candidates(describe_tags):
-            confidence += 0.10
-        return round(min(confidence, 0.95), 2)
+        return compute_confidence(
+            primary_signal=bool(describe_tags),
+            secondary_signal=bool(ocr_tags),
+            expansion_signal=bool(
+                normalized_tags and normalized_tags != clean_tag_candidates(describe_tags)
+            ),
+        )
 
     def _normalize_description_chunk(self, chunk: str) -> list[str]:
-        lowered = " ".join(chunk.lower().split())
-        if not lowered:
-            return []
-
-        if self._looks_like_object_phrase(lowered):
-            return [lowered]
-
-        # 설명형 문장은 핵심 명사 토큰으로 줄여 noise를 줄인다.
-        tokens = [
-            token
-            for token in re.findall(r"[a-z0-9가-힣]+", lowered)
-            if token not in _DESCRIPTION_STOPWORDS and len(token) >= 3
-        ]
-        return tokens[:4]
+        return normalize_text_chunk(chunk, _DESCRIPTION_STOP_PREFIXES, _DESCRIPTION_STOPWORDS)
 
     def _looks_like_object_phrase(self, chunk: str) -> bool:
-        if any(chunk.startswith(prefix) for prefix in _DESCRIPTION_STOP_PREFIXES):
-            return False
-        if len(chunk.split()) > 3:
-            return False
-        return True
+        return looks_like_object_phrase(chunk, _DESCRIPTION_STOP_PREFIXES)
 
     def _build_runtime_error_message(self, asset_path: Path, exc: Exception) -> str:
         error_text = str(exc)

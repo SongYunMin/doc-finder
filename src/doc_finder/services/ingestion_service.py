@@ -28,7 +28,7 @@ class IngestionService:
         tagger,
         embedding_service: HashingEmbeddingService,
         query_normalizer: QueryNormalizer | None = None,
-        max_file_size_bytes: int = 500_000,
+        max_file_size_bytes: int = 1_000_000,
         review_threshold: float = 0.8,
         progress_reporter: Callable[[str], None] | None = None,
     ) -> None:

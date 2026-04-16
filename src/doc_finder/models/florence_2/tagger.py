@@ -6,7 +6,15 @@ from pathlib import Path
 import re
 
 from doc_finder.services.query_normalizer import QueryNormalizer
-from doc_finder.services.tagging_service import TaggingError, TaggingResult, clean_tag_candidates
+from doc_finder.services.tagging_service import (
+    TaggingError,
+    TaggingResult,
+    build_normalized_tags,
+    clean_tag_candidates,
+    compute_confidence,
+    looks_like_object_phrase,
+    normalize_text_chunk,
+)
 
 _CAPTION_STOP_PREFIXES = (
     "the image",
@@ -148,10 +156,7 @@ class Florence2VisionTagger:
         return clean_tag_candidates(raw_candidates)
 
     def _build_normalized_tags(self, keyword_tags: list[str]) -> list[str]:
-        normalized_tags: list[str] = []
-        for tag in keyword_tags:
-            normalized_tags.extend(self._query_normalizer.normalize_tag_candidates(tag))
-        return clean_tag_candidates(normalized_tags)
+        return build_normalized_tags(keyword_tags, self._query_normalizer)
 
     def _compute_confidence(
         self,
@@ -159,37 +164,19 @@ class Florence2VisionTagger:
         caption_tags: list[str],
         normalized_tags: list[str],
     ) -> float:
-        confidence = 0.45
-        if od_tags:
-            confidence += 0.25
-        if set(od_tags).intersection(caption_tags):
-            confidence += 0.15
-        if normalized_tags and normalized_tags != clean_tag_candidates(caption_tags):
-            confidence += 0.10
-        return round(min(confidence, 0.95), 2)
+        return compute_confidence(
+            primary_signal=bool(od_tags),
+            secondary_signal=bool(set(od_tags).intersection(caption_tags)),
+            expansion_signal=bool(
+                normalized_tags and normalized_tags != clean_tag_candidates(caption_tags)
+            ),
+        )
 
     def _normalize_caption_chunk(self, chunk: str) -> list[str]:
-        lowered = " ".join(chunk.lower().split())
-        if not lowered:
-            return []
-
-        if self._looks_like_object_phrase(lowered):
-            return [lowered]
-
-        # 설명형 문장은 토큰으로 쪼개서 핵심 명사만 남긴다.
-        tokens = [
-            token
-            for token in re.findall(r"[a-z0-9가-힣]+", lowered)
-            if token not in _CAPTION_STOPWORDS and len(token) >= 3
-        ]
-        return tokens[:4]
+        return normalize_text_chunk(chunk, _CAPTION_STOP_PREFIXES, _CAPTION_STOPWORDS)
 
     def _looks_like_object_phrase(self, chunk: str) -> bool:
-        if any(chunk.startswith(prefix) for prefix in _CAPTION_STOP_PREFIXES):
-            return False
-        if len(chunk.split()) > 3:
-            return False
-        return True
+        return looks_like_object_phrase(chunk, _CAPTION_STOP_PREFIXES)
 
 
 def _run_florence_prompt(

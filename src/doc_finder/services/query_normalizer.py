@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+def _normalize_whitespace(text: str) -> str:
+    return " ".join(text.split()).casefold()
+
+
 DEFAULT_SYNONYMS = {
     "apple": "사과",
     "apples": "사과",
@@ -27,7 +31,7 @@ class QueryNormalizer:
             self._synonyms.update(synonyms)
 
     def normalize(self, query: str) -> NormalizedQuery:
-        cleaned_query = " ".join(query.split()).casefold()
+        cleaned_query = _normalize_whitespace(query)
         normalized_query = self._synonyms.get(cleaned_query, cleaned_query)
         variants = sorted({cleaned_query, normalized_query})
         return NormalizedQuery(
@@ -38,11 +42,11 @@ class QueryNormalizer:
         )
 
     def normalize_tag(self, tag: str) -> str:
-        cleaned_tag = " ".join(tag.split()).casefold()
+        cleaned_tag = _normalize_whitespace(tag)
         return self._synonyms.get(cleaned_tag, cleaned_tag)
 
     def normalize_tag_candidates(self, tag: str) -> list[str]:
-        cleaned_tag = " ".join(tag.split()).casefold()
+        cleaned_tag = _normalize_whitespace(tag)
         direct_match = self._synonyms.get(cleaned_tag)
         if direct_match:
             return [direct_match]
