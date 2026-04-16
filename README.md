@@ -115,6 +115,28 @@ python -m doc_finder.cli search --query "apple" --top-k 5
 python -m doc_finder.cli ingest --image-dir ./images
 ```
 
+## Run CLI tag preview
+
+DB에 저장하지 않고 Florence-2 계열 모델 결과만 1회성으로 비교할 수 있다.
+
+baseline 예시:
+
+```bash
+python -m doc_finder.cli tag \
+  --image-dir ./images \
+  --tagger-provider florence2 \
+  --florence2-model-id microsoft/Florence-2-large
+```
+
+candidate 예시:
+
+```bash
+python -m doc_finder.cli tag \
+  --image-dir ./images \
+  --tagger-provider florence2 \
+  --florence2-model-id microsoft/Florence-2-large-ft
+```
+
 Florence-2 로컬 태거 예시:
 
 ```bash
