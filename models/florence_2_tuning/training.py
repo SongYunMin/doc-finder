@@ -9,6 +9,13 @@ from typing import Any
 from models.florence_2_tuning.dataset import GeoTagExample, GeoTagJsonlDataset
 from models.florence_2_tuning.metrics import compute_tag_metrics
 
+DEFAULT_LORA_TARGET_MODULES = (
+    "q_proj",
+    "k_proj",
+    "v_proj",
+    "out_proj",
+)
+
 
 @dataclass(frozen=True)
 class TrainingConfig:
@@ -32,6 +39,12 @@ class TrainingConfig:
     device: str
     torch_dtype: str
     freeze_vision_encoder: bool
+    use_lora: bool = False
+    lora_r: int = 16
+    lora_alpha: int = 32
+    lora_dropout: float = 0.05
+    lora_target_modules: tuple[str, ...] = DEFAULT_LORA_TARGET_MODULES
+    save_merged_model: bool = False
     train_limit: int | None = None
     validation_limit: int | None = None
     log_every_steps: int = 10
@@ -113,9 +126,19 @@ def train(config: TrainingConfig) -> dict[str, Any]:
         config.model_id,
         trust_remote_code=True,
     )
+    florence_vision_model_type = getattr(
+        getattr(model.config, "vision_config", None),
+        "model_type",
+        None,
+    )
 
     if config.freeze_vision_encoder:
         _freeze_vision_encoder(model)
+    if config.use_lora:
+        model = _wrap_model_with_lora(
+            model=model,
+            config=config,
+        )
 
     collator = FlorenceBatchCollator(processor=processor)
     train_loader = DataLoader(
@@ -135,8 +158,14 @@ def train(config: TrainingConfig) -> dict[str, Any]:
             collate_fn=collator,
         )
 
+    trainable_parameters = [
+        parameter for parameter in model.parameters() if parameter.requires_grad
+    ]
+    if not trainable_parameters:
+        raise ValueError("학습 가능한 파라미터가 없습니다. freeze와 LoRA 설정을 확인하세요.")
+
     optimizer = AdamW(
-        model.parameters(),
+        trainable_parameters,
         lr=config.learning_rate,
         weight_decay=config.weight_decay,
     )
@@ -193,14 +222,32 @@ def train(config: TrainingConfig) -> dict[str, Any]:
         print(json.dumps(epoch_summary, ensure_ascii=False))
 
         checkpoint_dir = config.output_dir / f"checkpoint-epoch-{epoch}"
-        checkpoint_dir.mkdir(parents=True, exist_ok=True)
-        model.save_pretrained(checkpoint_dir)
-        processor.save_pretrained(checkpoint_dir)
+        _save_training_artifacts(
+            model=model,
+            processor=processor,
+            save_dir=checkpoint_dir,
+            florence_vision_model_type=florence_vision_model_type,
+            merge_lora=False,
+        )
+
+    if config.use_lora and config.save_merged_model:
+        adapter_dir = config.output_dir / "final_adapter"
+        _save_training_artifacts(
+            model=model,
+            processor=processor,
+            save_dir=adapter_dir,
+            florence_vision_model_type=florence_vision_model_type,
+            merge_lora=False,
+        )
 
     final_dir = config.output_dir / "final"
-    final_dir.mkdir(parents=True, exist_ok=True)
-    model.save_pretrained(final_dir)
-    processor.save_pretrained(final_dir)
+    _save_training_artifacts(
+        model=model,
+        processor=processor,
+        save_dir=final_dir,
+        florence_vision_model_type=florence_vision_model_type,
+        merge_lora=config.use_lora and config.save_merged_model,
+    )
 
     result = {
         "config": _serialize_config(config),
@@ -244,6 +291,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=True,
     )
+    parser.add_argument(
+        "--use-lora",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    parser.add_argument("--lora-r", type=int, default=16)
+    parser.add_argument("--lora-alpha", type=int, default=32)
+    parser.add_argument("--lora-dropout", type=float, default=0.05)
+    parser.add_argument(
+        "--lora-target-modules",
+        nargs="+",
+        default=list(DEFAULT_LORA_TARGET_MODULES),
+    )
+    parser.add_argument(
+        "--save-merged-model",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
     return parser
 
 
@@ -255,6 +320,13 @@ def parse_args(argv: list[str] | None = None) -> TrainingConfig:
     device = args.device or default_device
     torch_dtype = args.torch_dtype or _default_torch_dtype(device)
     validation_split = args.validation_split or None
+    lora_target_modules = tuple(
+        dict.fromkeys(
+            module.strip()
+            for module in (args.lora_target_modules or DEFAULT_LORA_TARGET_MODULES)
+            if module.strip()
+        )
+    )
 
     return TrainingConfig(
         dataset_path=args.dataset_path.resolve(),
@@ -277,6 +349,12 @@ def parse_args(argv: list[str] | None = None) -> TrainingConfig:
         device=device,
         torch_dtype=torch_dtype,
         freeze_vision_encoder=args.freeze_vision_encoder,
+        use_lora=args.use_lora,
+        lora_r=args.lora_r,
+        lora_alpha=args.lora_alpha,
+        lora_dropout=args.lora_dropout,
+        lora_target_modules=lora_target_modules,
+        save_merged_model=args.save_merged_model,
         train_limit=args.train_limit,
         validation_limit=args.validation_limit,
         log_every_steps=args.log_every_steps,
@@ -440,6 +518,96 @@ def _freeze_vision_encoder(model: object) -> None:
     for parameter in vision_tower.parameters():
         parameter.requires_grad = False
         setattr(parameter, "is_trainable", False)
+
+
+def _wrap_model_with_lora(
+    *,
+    model: object,
+    config: TrainingConfig,
+) -> object:
+    try:
+        from peft import LoraConfig, TaskType, get_peft_model
+    except ImportError as exc:
+        raise ImportError(
+            "LoRA 학습에는 `peft`와 `accelerate`가 필요합니다. "
+            "먼저 `./.venv/bin/pip install peft accelerate`를 실행하세요."
+        ) from exc
+
+    # Florence-2는 encoder-decoder 구조라 CAUSAL_LM보다 SEQ_2_SEQ_LM이 맞다.
+    lora_config = LoraConfig(
+        task_type=TaskType.SEQ_2_SEQ_LM,
+        r=config.lora_r,
+        lora_alpha=config.lora_alpha,
+        lora_dropout=config.lora_dropout,
+        target_modules=list(config.lora_target_modules),
+        bias="none",
+    )
+    lora_model = get_peft_model(model, lora_config)
+    if hasattr(lora_model, "print_trainable_parameters"):
+        lora_model.print_trainable_parameters()
+    return lora_model
+
+
+def _save_training_artifacts(
+    *,
+    model: object,
+    processor: object,
+    save_dir: Path,
+    florence_vision_model_type: str | None,
+    merge_lora: bool,
+) -> None:
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    if merge_lora:
+        if not hasattr(model, "merge_and_unload"):
+            raise ValueError("merge_lora=True 인데 현재 모델은 LoRA 모델이 아닙니다.")
+
+        # 앱 런타임에서 바로 읽을 수 있는 standalone checkpoint를 만든다.
+        merged_model = model.merge_and_unload(safe_merge=True)
+        merged_model.save_pretrained(save_dir)
+        _patch_saved_florence_config(
+            save_dir=save_dir,
+            expected_vision_model_type=florence_vision_model_type,
+        )
+        processor.save_pretrained(save_dir)
+        return
+
+    model.save_pretrained(save_dir)
+    _patch_saved_florence_config(
+        save_dir=save_dir,
+        expected_vision_model_type=florence_vision_model_type,
+    )
+    processor.save_pretrained(save_dir)
+
+
+def _patch_saved_florence_config(
+    *,
+    save_dir: Path,
+    expected_vision_model_type: str | None,
+) -> None:
+    if not expected_vision_model_type:
+        return
+
+    config_path = save_dir / "config.json"
+    if not config_path.exists():
+        return
+
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    vision_config = payload.get("vision_config")
+    if not isinstance(vision_config, dict):
+        return
+
+    current_model_type = str(vision_config.get("model_type", "")).strip()
+    if current_model_type:
+        return
+
+    # Florence remote config는 save_pretrained 후 vision model_type이 비는 경우가 있어
+    # 다시 로드할 수 있도록 최소 필드를 되살린다.
+    vision_config["model_type"] = expected_vision_model_type
+    config_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _serialize_config(config: TrainingConfig) -> dict[str, Any]:

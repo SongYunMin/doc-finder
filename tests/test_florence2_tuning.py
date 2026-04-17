@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from PIL import Image
 import pytest
 
 from models.florence_2_tuning.dataset import GeoTagExample, load_geotag_records
 from models.florence_2_tuning.metrics import compute_tag_metrics
-from models.florence_2_tuning.training import FlorenceBatchCollator
+from models.florence_2_tuning.training import (
+    FlorenceBatchCollator,
+    _patch_saved_florence_config,
+    parse_args,
+)
 
 
 class _FakeTokenBatch:
@@ -143,3 +148,65 @@ def test_compute_tag_metrics_scores_exact_match_and_macro_counts() -> None:
     assert metrics["tag_precision"] == pytest.approx(1.0)
     assert metrics["tag_recall"] == pytest.approx(0.75)
     assert metrics["tag_f1"] == pytest.approx(0.8571428571)
+
+
+def test_parse_args_supports_lora_options(tmp_path: Path) -> None:
+    dataset_path = tmp_path / "dataset.jsonl"
+    output_dir = tmp_path / "runs"
+
+    config = parse_args(
+        [
+            "--dataset",
+            str(dataset_path),
+            "--output-dir",
+            str(output_dir),
+            "--use-lora",
+            "--lora-r",
+            "16",
+            "--lora-alpha",
+            "32",
+            "--lora-dropout",
+            "0.05",
+            "--lora-target-modules",
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "out_proj",
+            "--save-merged-model",
+        ]
+    )
+
+    assert config.use_lora is True
+    assert config.lora_r == 16
+    assert config.lora_alpha == 32
+    assert config.lora_dropout == pytest.approx(0.05)
+    assert config.lora_target_modules == (
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "out_proj",
+    )
+    assert config.save_merged_model is True
+
+
+def test_patch_saved_florence_config_restores_blank_vision_model_type(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "model_type": "florence2",
+                "vision_config": {"model_type": ""},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _patch_saved_florence_config(
+        save_dir=tmp_path,
+        expected_vision_model_type="davit",
+    )
+
+    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    assert payload["vision_config"]["model_type"] == "davit"
