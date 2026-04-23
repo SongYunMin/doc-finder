@@ -1,12 +1,16 @@
-"""Florence-2 GeoTag 튜닝용 보조 모듈."""
+"""Florence-2 SearchTag 튜닝용 보조 모듈."""
 
 __all__ = [
     "FlorenceBatchCollator",
+    "SearchTagExample",
+    "SearchTagJsonlDataset",
+    "SearchTagRecord",
     "GeoTagExample",
     "GeoTagJsonlDataset",
     "GeoTagRecord",
     "TrainingConfig",
     "compute_tag_metrics",
+    "load_searchtag_records",
     "load_geotag_records",
     "train",
 ]
@@ -15,10 +19,32 @@ __all__ = [
 def __getattr__(name: str):
     # `python -m models.florence_2_tuning.training` 실행 시 선행 import 경고를 막기 위해
     # 패키지 루트에서는 필요한 시점에만 서브모듈을 불러온다.
-    if name in {"GeoTagExample", "GeoTagJsonlDataset", "GeoTagRecord", "load_geotag_records"}:
-        from models.florence_2_tuning.dataset import GeoTagExample, GeoTagJsonlDataset, GeoTagRecord, load_geotag_records
+    if name in {
+        "SearchTagExample",
+        "SearchTagJsonlDataset",
+        "SearchTagRecord",
+        "load_searchtag_records",
+        "GeoTagExample",
+        "GeoTagJsonlDataset",
+        "GeoTagRecord",
+        "load_geotag_records",
+    }:
+        from models.florence_2_tuning.dataset import (
+            GeoTagExample,
+            GeoTagJsonlDataset,
+            GeoTagRecord,
+            SearchTagExample,
+            SearchTagJsonlDataset,
+            SearchTagRecord,
+            load_geotag_records,
+            load_searchtag_records,
+        )
 
         exports = {
+            "SearchTagExample": SearchTagExample,
+            "SearchTagJsonlDataset": SearchTagJsonlDataset,
+            "SearchTagRecord": SearchTagRecord,
+            "load_searchtag_records": load_searchtag_records,
             "GeoTagExample": GeoTagExample,
             "GeoTagJsonlDataset": GeoTagJsonlDataset,
             "GeoTagRecord": GeoTagRecord,

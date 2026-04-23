@@ -7,6 +7,7 @@ import re
 from doc_finder.models.florence_2.tagger import _load_image_as_rgb
 from doc_finder.services.query_normalizer import QueryNormalizer
 from doc_finder.services.tagging_service import (
+    RawPreviewResult,
     TaggingError,
     TaggingResult,
     build_normalized_tags,
@@ -46,6 +47,9 @@ _DESCRIPTION_STOPWORDS = {
 class PaliGemma2VisionTagger:
     """PaliGemma 2 mix 체크포인트를 검색용 태그 계약으로 감싸는 어댑터."""
 
+    DESCRIBE_PROMPT = "describe en"
+    OCR_PROMPT = "ocr"
+
     def __init__(
         self,
         model_id: str,
@@ -69,8 +73,8 @@ class PaliGemma2VisionTagger:
 
         # v1은 설명형 프롬프트와 OCR 프롬프트를 합쳐 검색용 태그를 만든다.
         try:
-            describe_result = self._run_prompt("describe en", asset_path)
-            ocr_result = self._run_prompt("ocr", asset_path)
+            describe_result = self._run_prompt(self.DESCRIBE_PROMPT, asset_path)
+            ocr_result = self._run_prompt(self.OCR_PROMPT, asset_path)
         except Exception as exc:  # noqa: BLE001
             raise TaggingError(self._build_runtime_error_message(asset_path, exc)) from exc
 
@@ -86,6 +90,20 @@ class PaliGemma2VisionTagger:
             normalized_tags=normalized_tags,
             confidence=confidence,
             review_status=review_status,
+        )
+
+    def preview_raw(self, asset_path: Path, sha256: str) -> RawPreviewResult:
+        del sha256
+
+        try:
+            describe_result = self._run_prompt(self.DESCRIBE_PROMPT, asset_path)
+            ocr_result = self._run_prompt(self.OCR_PROMPT, asset_path)
+        except Exception as exc:  # noqa: BLE001
+            raise TaggingError(self._build_runtime_error_message(asset_path, exc)) from exc
+
+        return RawPreviewResult(
+            describe_raw=str(describe_result).strip(),
+            ocr_raw=str(ocr_result).strip(),
         )
 
     def _run_prompt(self, task_prompt: str, asset_path: Path) -> str:

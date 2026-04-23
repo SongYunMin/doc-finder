@@ -44,7 +44,7 @@
 현재 추천:
 
 ```text
-<GeoTag>
+<SearchTag>
 ```
 
 ### 2. Target text 형식
@@ -85,6 +85,6 @@ triangle; point_a; point_b; angle_label
 이 문서를 읽은 뒤 바로 해야 하는 것은 아래다.
 
 1. `label_taxonomy.example.yaml` 초안 채우기
-2. `geotag_dataset.sample.jsonl` 형식으로 20장 샘플 만들기
+2. `searchtag_dataset.sample.jsonl` 형식으로 20장 샘플 만들기
 3. zero-shot baseline 측정
 4. smoke fine-tuning 설계

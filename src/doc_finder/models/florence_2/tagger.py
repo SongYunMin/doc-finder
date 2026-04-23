@@ -7,6 +7,7 @@ import re
 
 from doc_finder.services.query_normalizer import QueryNormalizer
 from doc_finder.services.tagging_service import (
+    RawPreviewResult,
     TaggingError,
     TaggingResult,
     build_normalized_tags,
@@ -55,6 +56,10 @@ _CAPTION_STOPWORDS = {
 
 
 class Florence2VisionTagger:
+    OD_PROMPT = "<OD>"
+    CAPTION_PROMPT = "<CAPTION>"
+    OCR_PROMPT = "<OCR>"
+
     def __init__(
         self,
         model_id: str,
@@ -78,8 +83,8 @@ class Florence2VisionTagger:
     def tag(self, asset_path: Path, sha256: str) -> TaggingResult:
         # 운영 경로와 진단 경로가 같은 프롬프트 조합을 보도록 OD와 caption을 함께 호출한다.
         try:
-            od_result = self._run_prompt("<OD>", asset_path)
-            caption_result = self._run_prompt("<CAPTION>", asset_path)
+            od_result = self._run_prompt(self.OD_PROMPT, asset_path)
+            caption_result = self._run_prompt(self.CAPTION_PROMPT, asset_path)
         except Exception as exc:  # noqa: BLE001
             raise TaggingError(f"Florence-2 tagging failed for {asset_path.name}.") from exc
 
@@ -95,6 +100,22 @@ class Florence2VisionTagger:
             normalized_tags=normalized_tags,
             confidence=confidence,
             review_status=review_status,
+        )
+
+    def preview_raw(self, asset_path: Path, sha256: str) -> RawPreviewResult:
+        del sha256
+
+        try:
+            od_result = self._run_prompt(self.OD_PROMPT, asset_path)
+            ocr_result = self._run_prompt(self.OCR_PROMPT, asset_path)
+        except Exception as exc:  # noqa: BLE001
+            raise TaggingError(
+                f"Florence-2 raw preview failed for {asset_path.name}."
+            ) from exc
+
+        return RawPreviewResult(
+            od_raw=self._extract_od_tags(od_result),
+            ocr_raw=self._extract_ocr_text(ocr_result),
         )
 
     def _run_prompt(self, task_prompt: str, asset_path: Path) -> object:
@@ -142,7 +163,7 @@ class Florence2VisionTagger:
 
     def _extract_caption_tags(self, payload: object) -> list[str]:
         if isinstance(payload, dict):
-            caption_text = payload.get("<CAPTION>", "")
+            caption_text = payload.get(self.CAPTION_PROMPT, "")
         elif isinstance(payload, str):
             caption_text = payload
         else:
@@ -154,6 +175,11 @@ class Florence2VisionTagger:
             if cleaned:
                 raw_candidates.extend(self._normalize_caption_chunk(cleaned))
         return clean_tag_candidates(raw_candidates)
+
+    def _extract_ocr_text(self, payload: object) -> str:
+        if isinstance(payload, dict):
+            return str(payload.get(self.OCR_PROMPT, "")).strip()
+        return str(payload or "").strip()
 
     def _build_normalized_tags(self, keyword_tags: list[str]) -> list[str]:
         return build_normalized_tags(keyword_tags, self._query_normalizer)

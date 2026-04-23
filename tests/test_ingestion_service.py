@@ -139,7 +139,7 @@ def test_ingestion_service_indexes_tags_from_generic_tagger_contract(tmp_path: P
     assert summary.indexed_count == 1
     document = repository.all_documents()[0]
     assert document.keyword_tags == ["apple", "red apple"]
-    assert document.normalized_tags == ["사과"]
+    assert document.normalized_tags == ["apple"]
     assert document.review_status == "approved"
 
 

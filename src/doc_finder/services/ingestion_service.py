@@ -133,7 +133,14 @@ class IngestionService:
         keyword_tags: list[str],
         normalized_tags: list[str],
     ) -> str:
-        parts = list(dict.fromkeys([*normalized_tags, *keyword_tags]))
+        parts = list(
+            dict.fromkeys(
+                [
+                    *self._query_normalizer.projection_terms(normalized_tags),
+                    *keyword_tags,
+                ]
+            )
+        )
         return " ".join(parts)
 
     def _resolve_review_status(

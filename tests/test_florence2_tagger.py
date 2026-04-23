@@ -137,7 +137,7 @@ def test_florence2_tagger_merges_od_and_caption_results_into_keyword_tags() -> N
     result = tagger.tag(Path("10565_20077_1.png"), "sha")
 
     assert result.keyword_tags == ["apple", "bus", "red apple", "school bus"]
-    assert result.normalized_tags == ["사과", "버스"]
+    assert result.normalized_tags == ["apple", "bus"]
     assert result.confidence == pytest.approx(0.95)
     assert result.review_status == "approved"
 
@@ -161,9 +161,31 @@ def test_florence2_tagger_marks_low_evidence_result_as_pending() -> None:
     result = tagger.tag(Path("10565_20077_1.png"), "sha")
 
     assert result.keyword_tags == ["tiny object"]
-    assert result.normalized_tags == ["tiny object"]
+    assert result.normalized_tags == []
     assert result.confidence == pytest.approx(0.45)
     assert result.review_status == "pending"
+
+
+def test_florence2_tagger_preview_raw_returns_od_and_ocr_outputs() -> None:
+    from doc_finder.models.florence_2 import Florence2VisionTagger
+
+    tagger = Florence2VisionTagger(
+        model_id="microsoft/Florence-2-base",
+        device="cpu",
+        torch_dtype="float32",
+        query_normalizer=QueryNormalizer(),
+        prompt_runner=_StubFlorenceRunner(
+            {
+                "<OD>": {"<OD>": {"labels": ["apple", "bus"]}},
+                "<OCR>": {"<OCR>": "서윤"},
+            }
+        ),
+    )
+
+    result = tagger.preview_raw(Path("10565_20077_1.png"), "sha")
+
+    assert result.od_raw == ["apple", "bus"]
+    assert result.ocr_raw == "서윤"
 
 
 def test_florence2_tagger_reduces_sentence_like_caption_to_object_tokens() -> None:

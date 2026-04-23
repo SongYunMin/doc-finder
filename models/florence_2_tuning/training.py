@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from models.florence_2_tuning.dataset import GeoTagExample, GeoTagJsonlDataset
+from models.florence_2_tuning.dataset import SearchTagExample, SearchTagJsonlDataset
 from models.florence_2_tuning.metrics import compute_tag_metrics
 
 DEFAULT_LORA_TARGET_MODULES = (
@@ -55,7 +55,7 @@ class FlorenceBatchCollator:
         self._processor = processor
         self.ignore_index = ignore_index
 
-    def __call__(self, batch: list[GeoTagExample]) -> dict[str, object]:
+    def __call__(self, batch: list[SearchTagExample]) -> dict[str, object]:
         prompts = [example.prompt for example in batch]
         targets = [example.target_text for example in batch]
         images = [example.image for example in batch]
@@ -95,7 +95,7 @@ def train(config: TrainingConfig) -> dict[str, Any]:
         _serialize_config(config),
     )
 
-    train_dataset = GeoTagJsonlDataset(
+    train_dataset = SearchTagJsonlDataset(
         dataset_path=config.dataset_path,
         image_root=config.image_root,
         split=config.train_split,
@@ -106,7 +106,7 @@ def train(config: TrainingConfig) -> dict[str, Any]:
 
     validation_dataset = None
     if config.validation_split is not None:
-        validation_dataset = GeoTagJsonlDataset(
+        validation_dataset = SearchTagJsonlDataset(
             dataset_path=config.dataset_path,
             image_root=config.image_root,
             split=config.validation_split,
@@ -259,7 +259,7 @@ def train(config: TrainingConfig) -> dict[str, Any]:
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Florence-2 GeoTag 튜닝 스크립트",
+        description="Florence-2 SearchTag 튜닝 스크립트",
     )
     parser.add_argument("--dataset", required=True, type=Path, dest="dataset_path")
     parser.add_argument("--output-dir", required=True, type=Path)

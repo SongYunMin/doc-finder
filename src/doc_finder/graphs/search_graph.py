@@ -55,6 +55,7 @@ def build_tag_search_graph(repository, query_normalizer, embedding_service):
                 "asset_path": document.asset_path,
                 "preview_path": None,
                 "matched_tags": [],
+                "matched_display_tags": [],
                 "confidence": document.confidence,
                 "score": round(candidate.score, 6),
                 "cms_ref": {
@@ -77,6 +78,9 @@ def build_tag_search_graph(repository, query_normalizer, embedding_service):
                     "asset_path": document.asset_path,
                     "preview_path": None,
                     "matched_tags": candidate.matched_tags,
+                    "matched_display_tags": query_normalizer.display_tags(
+                        candidate.matched_tags
+                    ),
                     "confidence": document.confidence,
                     "score": boosted_score,
                     "cms_ref": {
@@ -88,6 +92,9 @@ def build_tag_search_graph(repository, query_normalizer, embedding_service):
                 continue
 
             current["matched_tags"] = candidate.matched_tags
+            current["matched_display_tags"] = query_normalizer.display_tags(
+                candidate.matched_tags
+            )
             current["score"] = max(float(current["score"]), boosted_score)
             current["_exact_hit"] = True
 

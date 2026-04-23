@@ -5,7 +5,7 @@
 이 폴더는 `models/finetune_florence_2/`에 정리한 준비 문서를 실제 실행 가능한 학습 파이프라인으로 연결하는 초안이다.
 
 - 런타임 태거 구현은 계속 `src/doc_finder/models/florence_2/`에 둔다.
-- 이 폴더는 Florence-2 GeoTag 튜닝 실행 코드와 결과 산출물 경로를 맡는다.
+- 이 폴더는 Florence-2 SearchTag 튜닝 실행 코드와 결과 산출물 경로를 맡는다.
 - 현재 기본 전략은 `full fine-tuning + vision encoder freeze`다.
 
 ## 현재 구성
@@ -18,7 +18,7 @@
 
 기본 입력 포맷은 기존 준비 폴더의 템플릿을 그대로 따른다.
 
-- 샘플 파일: `models/finetune_florence_2/templates/geotag_dataset.sample.jsonl`
+- 샘플 파일: `models/finetune_florence_2/templates/searchtag_dataset.sample.jsonl`
 - 필수 필드:
   - `image`
   - `prompt`
@@ -28,7 +28,7 @@
 예시:
 
 ```json
-{"image":"images/10565_20077_1.png","prompt":"<GeoTag>","target_text":"triangle; point_a; point_b; point_c; angle_label","split":"train"}
+{"image":"images/10565_20077_1.png","prompt":"<SearchTag>","target_text":"apple; rectangle; right_angle","split":"train"}
 ```
 
 ## 실행 예시
@@ -37,7 +37,7 @@
 
 ```bash
 ./.venv/bin/python -m models.florence_2_tuning.training \
-  --dataset /Users/knowre-yunmin/doc-finder/models/finetune_florence_2/templates/geotag_dataset.sample.jsonl \
+  --dataset /Users/knowre-yunmin/doc-finder/models/finetune_florence_2/templates/searchtag_dataset.sample.jsonl \
   --image-root /Users/knowre-yunmin/doc-finder \
   --output-dir /Users/knowre-yunmin/doc-finder/models/florence_2_tuning/runs/smoke \
   --epochs 1 \

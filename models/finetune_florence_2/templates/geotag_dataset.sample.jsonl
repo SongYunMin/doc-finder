@@ -1,3 +1,0 @@
-{"image":"images/10565_20077_1.png","prompt":"<GeoTag>","target_text":"triangle; point_a; point_b; point_c; angle_label","split":"train","notes":"삼각형과 각 표시가 보이는 기본 샘플"}
-{"image":"images/11388_1.png","prompt":"<GeoTag>","target_text":"circle; point_a; radius; angle_label","split":"validation","notes":"원과 반지름, 각 표기가 함께 있는 샘플"}
-{"image":"images/115_21_1.png","prompt":"<GeoTag>","target_text":"line_segment; parallel; point_a; point_b","split":"test","notes":"평행 관계를 보는 평가 샘플"}

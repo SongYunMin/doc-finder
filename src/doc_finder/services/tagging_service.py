@@ -25,6 +25,13 @@ class TaggingResult:
     review_status: str = "approved"
 
 
+@dataclass(slots=True)
+class RawPreviewResult:
+    od_raw: list[str] | None = None
+    ocr_raw: str | None = None
+    describe_raw: str | None = None
+
+
 class VisionTagger(Protocol):
     def tag(self, asset_path: Path, sha256: str) -> TaggingResult:
         """이미지 자산을 검색용 태그 계약으로 변환한다."""
@@ -111,10 +118,12 @@ class HttpVisionTagger:
     def __init__(
         self,
         endpoint_url: str,
+        query_normalizer: QueryNormalizer,
         api_key: str | None = None,
         timeout_seconds: float = 30.0,
     ) -> None:
         self._endpoint_url = endpoint_url
+        self._query_normalizer = query_normalizer
         self._api_key = api_key
         self._timeout_seconds = timeout_seconds
 
@@ -143,11 +152,14 @@ class HttpVisionTagger:
         except Exception as exc:  # noqa: BLE001
             raise TaggingError(f"Vision tagging failed for {asset_path.name}.") from exc
 
+        keyword_tags = clean_tag_candidates(list(data["keyword_tags"]))
+        normalized_tags = build_normalized_tags(
+            clean_tag_candidates(list(data.get("normalized_tags", data["keyword_tags"]))),
+            self._query_normalizer,
+        )
         return TaggingResult(
-            keyword_tags=clean_tag_candidates(list(data["keyword_tags"])),
-            normalized_tags=clean_tag_candidates(
-                list(data.get("normalized_tags", data["keyword_tags"]))
-            ),
+            keyword_tags=keyword_tags,
+            normalized_tags=normalized_tags,
             confidence=float(data["confidence"]),
             review_status=str(data.get("review_status", "approved")),
         )

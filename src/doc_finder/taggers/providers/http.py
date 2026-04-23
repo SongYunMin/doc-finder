@@ -12,8 +12,6 @@ def build_http_tagger(
     query_normalizer: QueryNormalizer,
     environ: Mapping[str, str],
 ):
-    del query_normalizer
-
     endpoint_url = environ.get("DOC_FINDER_VISION_ENDPOINT")
     if not endpoint_url:
         raise ValueError(
@@ -21,6 +19,7 @@ def build_http_tagger(
         )
     return HttpVisionTagger(
         endpoint_url=endpoint_url,
+        query_normalizer=query_normalizer,
         api_key=environ.get("DOC_FINDER_VISION_API_KEY"),
     )
 

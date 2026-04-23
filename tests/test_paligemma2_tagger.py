@@ -77,7 +77,7 @@ def test_paligemma2_tagger_merges_describe_and_ocr_results_into_keyword_tags() -
     result = tagger.tag(Path("10565_20077_1.png"), "sha")
 
     assert result.keyword_tags == ["red apple", "school bus", "a", "36"]
-    assert result.normalized_tags == ["사과", "버스", "a", "36"]
+    assert result.normalized_tags == ["apple", "bus"]
     assert result.confidence == pytest.approx(0.95)
     assert result.review_status == "approved"
 
@@ -126,6 +126,29 @@ def test_paligemma2_tagger_preserves_short_ocr_tokens() -> None:
 
     assert result.keyword_tags == ["geometry diagram", "a", "b", "c", "36", "55"]
     assert result.review_status == "approved"
+
+
+def test_paligemma2_tagger_preview_raw_returns_describe_and_ocr_outputs() -> None:
+    from doc_finder.models.paligemma_2 import PaliGemma2VisionTagger
+
+    tagger = PaliGemma2VisionTagger(
+        model_id="google/paligemma2-3b-mix-448",
+        device="cpu",
+        torch_dtype="float32",
+        query_normalizer=QueryNormalizer(),
+        prompt_runner=_StubPaliGemmaRunner(
+            {
+                "describe en": "a geometric diagram with shaded regions",
+                "ocr": "서윤",
+            }
+        ),
+    )
+
+    result = tagger.preview_raw(Path("10565_20077_1.png"), "sha")
+
+    assert result.describe_raw == "a geometric diagram with shaded regions"
+    assert result.ocr_raw == "서윤"
+    assert result.od_raw is None
 
 
 def test_paligemma2_model_loader_uses_torch_dtype_keyword(monkeypatch) -> None:

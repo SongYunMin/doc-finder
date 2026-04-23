@@ -17,9 +17,17 @@ def _detect_torch_device() -> str:
 from doc_finder.taggers.providers import (  # noqa: E402
     florence2,
     florence2_large_ft,
+    florence2_searchtag_ft,
     http,
     paligemma2,
     static,
 )  # noqa: F401
 
-__all__ = ["florence2", "florence2_large_ft", "http", "paligemma2", "static"]
+__all__ = [
+    "florence2",
+    "florence2_large_ft",
+    "florence2_searchtag_ft",
+    "http",
+    "paligemma2",
+    "static",
+]

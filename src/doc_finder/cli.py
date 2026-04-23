@@ -1,5 +1,5 @@
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
 import json
 import os
 from pathlib import Path
@@ -12,6 +12,20 @@ from doc_finder.schemas.search import TagSearchRequest, TagSearchResponse
 from doc_finder.services.ingestion_service import IngestionSummary
 from doc_finder.services.tag_preview_service import TagPreviewService
 from doc_finder.taggers import build_tagger
+
+
+def _drop_none_fields(value):
+    if is_dataclass(value):
+        return _drop_none_fields(asdict(value))
+    if isinstance(value, dict):
+        return {
+            key: _drop_none_fields(item)
+            for key, item in value.items()
+            if item is not None
+        }
+    if isinstance(value, list):
+        return [_drop_none_fields(item) for item in value]
+    return value
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -95,7 +109,7 @@ def main(argv: list[str] | None = None) -> None:
         )
         report = TagPreviewService(tagger).preview_directory(Path(args.image_dir))
         # 사람이 비교하기 쉬운 진단 출력이 우선이므로 줄바꿈된 JSON으로 렌더링한다.
-        print(json.dumps(asdict(report), ensure_ascii=False, indent=2))
+        print(json.dumps(_drop_none_fields(report), ensure_ascii=False, indent=2))
         return
 
     # MVP에서는 배치 인덱싱을 HTTP job 없이 돌릴 수 있게 CLI를 우선 경로로 둔다.

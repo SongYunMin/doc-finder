@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 
 @dataclass(frozen=True)
-class GeoTagRecord:
+class SearchTagRecord:
     image_path: Path
     prompt: str
     target_text: str
@@ -18,7 +18,7 @@ class GeoTagRecord:
 
 
 @dataclass(frozen=True)
-class GeoTagExample:
+class SearchTagExample:
     image: Image.Image
     image_path: Path
     prompt: str
@@ -27,13 +27,13 @@ class GeoTagExample:
     notes: str | None = None
 
 
-def load_geotag_records(
+def load_searchtag_records(
     *,
     dataset_path: Path,
     image_root: Path | None = None,
     split: str | None = None,
-) -> list[GeoTagRecord]:
-    records: list[GeoTagRecord] = []
+) -> list[SearchTagRecord]:
+    records: list[SearchTagRecord] = []
 
     with dataset_path.open("r", encoding="utf-8") as dataset_file:
         for line_number, raw_line in enumerate(dataset_file, start=1):
@@ -60,7 +60,7 @@ def load_geotag_records(
     return records
 
 
-class GeoTagJsonlDataset(Dataset[GeoTagExample]):
+class SearchTagJsonlDataset(Dataset[SearchTagExample]):
     def __init__(
         self,
         *,
@@ -69,7 +69,7 @@ class GeoTagJsonlDataset(Dataset[GeoTagExample]):
         split: str | None = None,
         limit: int | None = None,
     ) -> None:
-        records = load_geotag_records(
+        records = load_searchtag_records(
             dataset_path=dataset_path,
             image_root=image_root,
             split=split,
@@ -81,14 +81,14 @@ class GeoTagJsonlDataset(Dataset[GeoTagExample]):
     def __len__(self) -> int:
         return len(self._records)
 
-    def __getitem__(self, index: int) -> GeoTagExample:
+    def __getitem__(self, index: int) -> SearchTagExample:
         record = self._records[index]
 
         # 학습 직전 항상 RGB로 맞춰서 processor 입력 규격을 고정한다.
         with Image.open(record.image_path) as source_image:
             image = source_image.convert("RGB")
 
-        return GeoTagExample(
+        return SearchTagExample(
             image=image,
             image_path=record.image_path,
             prompt=record.prompt,
@@ -103,7 +103,7 @@ def _build_record(
     payload: object,
     dataset_path: Path,
     image_root: Path | None,
-) -> GeoTagRecord:
+) -> SearchTagRecord:
     if not isinstance(payload, dict):
         raise ValueError(f"{dataset_path} JSONL 각 줄은 객체여야 합니다.")
 
@@ -123,7 +123,7 @@ def _build_record(
             f"학습 이미지가 존재하지 않습니다: {resolved_image_path}"
         )
 
-    return GeoTagRecord(
+    return SearchTagRecord(
         image_path=resolved_image_path,
         prompt=prompt_value,
         target_text=target_value,
@@ -141,3 +141,10 @@ def _require_text(payload: dict[str, object], key: str, dataset_path: Path) -> s
     if not value:
         raise ValueError(f"{dataset_path} JSONL의 `{key}` 값이 비어 있습니다.")
     return value
+
+
+# SearchTag가 공식 용어지만, 기존 smoke 스크립트와 테스트 깨짐을 줄이기 위해 alias를 남긴다.
+GeoTagRecord = SearchTagRecord
+GeoTagExample = SearchTagExample
+GeoTagJsonlDataset = SearchTagJsonlDataset
+load_geotag_records = load_searchtag_records

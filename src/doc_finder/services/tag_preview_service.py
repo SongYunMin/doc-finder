@@ -26,10 +26,9 @@ class TagPreviewSummary:
 @dataclass(slots=True)
 class TagPreviewResult:
     asset_path: str
-    keyword_tags: list[str]
-    normalized_tags: list[str]
-    confidence: float
-    review_status: str
+    od_raw: list[str] | None = None
+    ocr_raw: str | None = None
+    describe_raw: str | None = None
 
 
 @dataclass(slots=True)
@@ -61,14 +60,29 @@ class TagPreviewService:
                     asset_path,
                     max_file_size_bytes=self._max_file_size_bytes,
                 )
-                tagging_result = self._tagger.tag(asset_path, metadata.sha256)
+                preview_method = getattr(self._tagger, "preview_raw", None)
+                if preview_method is None:
+                    raise TaggingError("raw preview is not supported by this tagger.")
+
+                preview_result = preview_method(asset_path, metadata.sha256)
                 results.append(
                     TagPreviewResult(
                         asset_path=str(asset_path),
-                        keyword_tags=list(tagging_result.keyword_tags),
-                        normalized_tags=list(tagging_result.normalized_tags),
-                        confidence=float(tagging_result.confidence),
-                        review_status=str(tagging_result.review_status),
+                        od_raw=(
+                            list(preview_result.od_raw)
+                            if preview_result.od_raw is not None
+                            else None
+                        ),
+                        ocr_raw=(
+                            str(preview_result.ocr_raw)
+                            if preview_result.ocr_raw is not None
+                            else None
+                        ),
+                        describe_raw=(
+                            str(preview_result.describe_raw)
+                            if preview_result.describe_raw is not None
+                            else None
+                        ),
                     )
                 )
                 summary.tagged_count += 1

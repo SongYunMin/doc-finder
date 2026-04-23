@@ -1,0 +1,3 @@
+{"image":"images/10565_20077_1.png","prompt":"<SearchTag>","target_text":"triangle; right_angle","split":"train","notes":"삼각형과 직각 표기가 함께 있는 샘플"}
+{"image":"images/11388_1.png","prompt":"<SearchTag>","target_text":"circle; right_angle","split":"validation","notes":"원과 직각 관련 표기가 함께 있는 샘플"}
+{"image":"images/115_21_1.png","prompt":"<SearchTag>","target_text":"rectangle; right_angle","split":"test","notes":"사각형과 직각 검색을 확인하는 평가 샘플"}

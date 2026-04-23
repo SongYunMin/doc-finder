@@ -210,3 +210,18 @@ def test_patch_saved_florence_config_restores_blank_vision_model_type(
 
     payload = json.loads(config_path.read_text(encoding="utf-8"))
     assert payload["vision_config"]["model_type"] == "davit"
+
+
+def test_searchtag_sample_dataset_uses_searchtag_prompt_prefix() -> None:
+    dataset_path = Path(
+        "/Users/knowre-yunmin/doc-finder/models/finetune_florence_2/templates/searchtag_dataset.sample.jsonl"
+    )
+
+    rows = [
+        json.loads(line)
+        for line in dataset_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert rows
+    assert all(row["prompt"] == "<SearchTag>" for row in rows)

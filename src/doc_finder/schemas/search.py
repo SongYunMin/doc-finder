@@ -19,6 +19,7 @@ class TagSearchResult(BaseModel):
     asset_path: str
     preview_path: str | None = None
     matched_tags: list[str] = Field(default_factory=list)
+    matched_display_tags: list[str] = Field(default_factory=list)
     confidence: float
     score: float
     cms_ref: CmsReference

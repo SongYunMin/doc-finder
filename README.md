@@ -145,7 +145,8 @@ candidate 예시:
 ```bash
 python -m doc_finder.cli tag \
   --image-dir ./images \
-  --tagger-provider florence2-large-ft
+  --tagger-provider florence2-searchtag-ft \
+  --florence2-model-id /absolute/path/to/searchtag/final
 ```
 
 PaliGemma 2 preview 예시:

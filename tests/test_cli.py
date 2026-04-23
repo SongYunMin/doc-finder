@@ -20,7 +20,8 @@ class _StubSearchService:
                         "image_id": 1,
                         "asset_path": "10565_20077_1.svg",
                         "preview_path": None,
-                        "matched_tags": ["사과"],
+                        "matched_tags": ["apple"],
+                        "matched_display_tags": ["apple (사과)"],
                         "confidence": 0.95,
                         "score": 1.0,
                         "cms_ref": {"unit_id": 10565, "data_id": 20077},
@@ -48,10 +49,8 @@ class _StubTagPreviewService:
             results=[
                 TagPreviewResult(
                     asset_path="10565_20077_1.svg",
-                    keyword_tags=["apple"],
-                    normalized_tags=["사과"],
-                    confidence=0.95,
-                    review_status="approved",
+                    od_raw=["apple"],
+                    ocr_raw="서윤",
                 )
             ],
         )
@@ -90,7 +89,7 @@ def test_cli_tag_prints_json_preview_result(capsys, monkeypatch, tmp_path: Path)
     monkeypatch.setattr(
         cli_module,
         "TagPreviewService",
-        lambda tagger: _StubTagPreviewService(),
+        lambda tagger, **kwargs: _StubTagPreviewService(),
     )
 
     cli_module.main(["tag", "--image-dir", str(tmp_path)])
@@ -98,7 +97,9 @@ def test_cli_tag_prints_json_preview_result(capsys, monkeypatch, tmp_path: Path)
     output = capsys.readouterr().out
     payload = json.loads(output)
     assert payload["summary"]["tagged_count"] == 1
-    assert payload["results"][0]["normalized_tags"] == ["사과"]
+    assert payload["results"][0]["od_raw"] == ["apple"]
+    assert payload["results"][0]["ocr_raw"] == "서윤"
+    assert "describe_raw" not in payload["results"][0]
     assert output.startswith("{\n")
     assert '\n  "summary": {\n' in output
     assert '\n  "results": [\n' in output
@@ -117,7 +118,7 @@ def test_cli_tag_prefers_model_id_flag_over_env(monkeypatch, tmp_path: Path) -> 
     monkeypatch.setattr(
         cli_module,
         "TagPreviewService",
-        lambda tagger: _StubTagPreviewService(),
+        lambda tagger, **kwargs: _StubTagPreviewService(),
     )
 
     cli_module.main(
@@ -150,7 +151,7 @@ def test_cli_tag_supports_florence2_large_ft_provider(monkeypatch, tmp_path: Pat
     monkeypatch.setattr(
         cli_module,
         "TagPreviewService",
-        lambda tagger: _StubTagPreviewService(),
+        lambda tagger, **kwargs: _StubTagPreviewService(),
     )
 
     cli_module.main(
@@ -181,7 +182,7 @@ def test_cli_tag_prefers_paligemma2_model_id_flag_over_env(monkeypatch, tmp_path
     monkeypatch.setattr(
         cli_module,
         "TagPreviewService",
-        lambda tagger: _StubTagPreviewService(),
+        lambda tagger, **kwargs: _StubTagPreviewService(),
     )
 
     cli_module.main(

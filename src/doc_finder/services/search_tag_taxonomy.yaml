@@ -22,6 +22,12 @@ display_aliases_ko:
     - 과일
   bus:
     - 버스
+  person:
+    - 사람
+  wheelchair:
+    - 휠체어
+  grass:
+    - 잔디
   rectangle:
     - 사각형
     - 네모
@@ -38,7 +44,11 @@ display_aliases_ko:
 query_aliases_ko:
   사과: apple
   과일: fruit
+  빨간 과일: fruit
   버스: bus
+  사람: person
+  휠체어: wheelchair
+  잔디: grass
   사각형: rectangle
   네모: rectangle
   정사각형: square
@@ -46,19 +56,4 @@ query_aliases_ko:
   삼각형: triangle
   직각: right_angle
   90도: right_angle
-  90: right_angle
-
-naming_rules:
-  - "학습 정답은 영어 canonical 태그 하나만 유지한다."
-  - "검색 표시나 질의 동의어는 별칭 매핑으로 처리한다."
-  - "색상, OCR 숫자 자체, 점 라벨 같은 세부 태그는 v1 canonical에서 제외한다."
-
-forbidden_examples:
-  - "red apple"
-  - "point_a"
-  - "90"
-
-preferred_replacements:
-  red apple: apple
-  point_a: ""
   90: right_angle
