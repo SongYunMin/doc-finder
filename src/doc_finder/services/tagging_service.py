@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 import base64
 import json
-import re
 import string
 from typing import TYPE_CHECKING, Protocol
 import urllib.request
@@ -23,13 +22,6 @@ class TaggingResult:
     normalized_tags: list[str]
     confidence: float
     review_status: str = "approved"
-
-
-@dataclass(slots=True)
-class RawPreviewResult:
-    od_raw: list[str] | None = None
-    ocr_raw: str | None = None
-    describe_raw: str | None = None
 
 
 class VisionTagger(Protocol):
@@ -62,45 +54,6 @@ def build_normalized_tags(keyword_tags: list[str], query_normalizer: QueryNormal
     for tag in keyword_tags:
         normalized.extend(query_normalizer.normalize_tag_candidates(tag))
     return clean_tag_candidates(normalized)
-
-
-def looks_like_object_phrase(chunk: str, stop_prefixes: tuple[str, ...]) -> bool:
-    if any(chunk.startswith(prefix) for prefix in stop_prefixes):
-        return False
-    return len(chunk.split()) <= 3
-
-
-def normalize_text_chunk(
-    chunk: str,
-    stop_prefixes: tuple[str, ...],
-    stopwords: set[str],
-) -> list[str]:
-    lowered = " ".join(chunk.lower().split())
-    if not lowered:
-        return []
-    if looks_like_object_phrase(lowered, stop_prefixes):
-        return [lowered]
-    tokens = [
-        t
-        for t in re.findall(r"[a-z0-9가-힣]+", lowered)
-        if t not in stopwords and len(t) >= 3
-    ]
-    return tokens[:4]
-
-
-def compute_confidence(
-    primary_signal: bool,
-    secondary_signal: bool,
-    expansion_signal: bool,
-) -> float:
-    confidence = 0.45
-    if primary_signal:
-        confidence += 0.25
-    if secondary_signal:
-        confidence += 0.15
-    if expansion_signal:
-        confidence += 0.10
-    return round(min(confidence, 0.95), 2)
 
 
 class StaticVisionTagger:

@@ -7,3 +7,5 @@ __pycache__
 .idea
 .jbeval
 .DS_Store
+.codex/
+models/**/runs/

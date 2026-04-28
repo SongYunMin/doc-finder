@@ -47,7 +47,12 @@ def test_build_default_ingestion_service_uses_generic_tagger_builder(monkeypatch
     assert isinstance(captured["query_normalizer"], QueryNormalizer)
 
 
-def test_available_tagger_providers_includes_paligemma2() -> None:
+def test_available_tagger_providers_exposes_only_core_providers() -> None:
     from doc_finder.taggers import available_tagger_providers
 
-    assert "paligemma2" in available_tagger_providers()
+    providers = available_tagger_providers()
+
+    assert "http" in providers
+    assert "static" in providers
+    assert "florence2" not in providers
+    assert "paligemma2" not in providers

@@ -27,11 +27,3 @@ class TagSearchResult(BaseModel):
 
 class TagSearchResponse(BaseModel):
     results: list[TagSearchResult] = Field(default_factory=list)
-
-
-class TextSearchRequest(TagSearchRequest):
-    pass
-
-
-class TextSearchResponse(TagSearchResponse):
-    pass

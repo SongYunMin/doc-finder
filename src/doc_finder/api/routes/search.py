@@ -17,11 +17,3 @@ def search_by_tags(
     service: SearchService = Depends(get_search_service),
 ) -> TagSearchResponse:
     return service.search(request)
-
-
-@router.post("/text", response_model=TagSearchResponse, deprecated=True)
-def text_search_alias(
-    request: TagSearchRequest,
-    service: SearchService = Depends(get_search_service),
-) -> TagSearchResponse:
-    return service.search(request)

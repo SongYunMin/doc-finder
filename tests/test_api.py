@@ -55,12 +55,8 @@ def test_search_by_tags_endpoint_returns_tag_results() -> None:
     assert "question_json" not in response.json()["results"][0]
 
 
-def test_text_search_endpoint_is_deprecated_alias_for_by_tags() -> None:
+def test_text_search_endpoint_is_not_part_of_minimal_api() -> None:
     client = _build_client()
     response = client.post("/search/text", json={"query": "apple", "top_k": 5})
 
-    assert response.status_code == 200
-    assert response.json()["results"][0]["cms_ref"] == {
-        "unit_id": 10565,
-        "data_id": 20077,
-    }
+    assert response.status_code == 404
