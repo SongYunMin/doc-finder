@@ -29,19 +29,19 @@ CMS는 원본 데이터의 source of truth이고, DocFinder는 검색용 project
 - `src/doc_finder/graphs/search_graph.py`: exact tag + semantic 후보 병합 검색
 - `src/doc_finder/taggers/`: provider registry
 
-## 3. 제거한 범위
+## 3. Core에서 분리한 범위
 
-프로젝트를 테스트 환경 기준으로 줄이기 위해 실험성 로컬 모델 코드를 제거했다.
+프로젝트를 테스트 환경 기준으로 줄이기 위해 core 검색 서버와 직접 관련 없는 모델별 실험 코드를 분리했다.
 
-- Florence-2 런타임 태거
+- FastAPI 앱 내부에서 직접 실행하던 Florence-2 런타임 태거
 - Florence-2 large fine-tuned wrapper
 - Florence-2 SearchTag fine-tuned wrapper
 - PaliGemma 2 런타임 태거
 - 태그 raw preview CLI/service
 - `models/` 아래 튜닝 문서와 학습 파이프라인 코드
-- Torch/Transformers/PEFT 계열 의존성
+- core 서버 의존성에 섞여 있던 Torch/Transformers/PEFT 계열 의존성
 
-이 기능들은 현재 핵심 검색 서버보다 실험 코드 성격이 강했다. 다시 필요하면 별도 실험 브랜치 또는 외부 HTTP 태거 서비스로 분리해서 붙이는 편이 안전하다.
+Florence-2를 사용하지 않는다는 뜻은 아니다. 다만 DocFinder core는 모델 실행 환경을 직접 품지 않고, Florence-2는 별도 HTTP 태거 서비스나 실험 브랜치에서 검증한 뒤 `http` provider 뒤에 붙이는 편이 안전하다.
 
 ## 4. 데이터 계약
 
@@ -99,7 +99,7 @@ POST /search/by-tags
 - `static`: 로컬 테스트용 JSON fixture 태거
 - `http`: 외부 태깅 API 연동용 태거
 
-로컬 모델 provider는 제거했다. 대량 태깅을 다시 시도할 때도 앱 내부에 모델 코드를 직접 넣기보다, HTTP 태거 서비스로 분리하는 것이 운영상 더 단순하다.
+로컬 모델 provider는 core 경로에서 분리했다. 대량 태깅을 다시 시도할 때도 앱 내부에 모델 코드를 직접 넣기보다, Florence-2 같은 모델 런타임은 HTTP 태거 서비스로 분리하는 것이 운영상 더 단순하다.
 
 ## 8. 남은 리스크
 
@@ -111,7 +111,7 @@ POST /search/by-tags
 ## 9. 다음 액션
 
 1. `static` provider로 작은 샘플 ingest/search를 안정화한다.
-2. 외부 LLM/Ollama/Gemma 태깅은 앱 내부 모델 코드가 아니라 `http` provider 뒤에 붙인다.
+2. Florence-2/외부 LLM/Ollama/Gemma 태깅은 앱 내부 모델 코드가 아니라 `http` provider 뒤에 붙인다.
 3. 100~300장 샘플에 대해 expected tag와 expected search query를 먼저 만든다.
 4. 필요할 때만 embedding/vector store를 교체한다.
 5. 대량 처리 전에 실패 재처리와 진행률 저장 방식을 설계한다.

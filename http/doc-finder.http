@@ -5,7 +5,8 @@ GET {{baseUrl}}/health
 Accept: application/json
 
 ### Note
-# Florence-2 로컬 태거로 ingest를 먼저 실행한 뒤 검색해야 결과가 나온다.
+# CLI ingest를 먼저 실행한 뒤 검색해야 결과가 나온다.
+# Florence-2는 별도 HTTP 태거 서비스로 띄운 뒤 http provider 뒤에 붙인다.
 
 ### Tag Search
 POST {{baseUrl}}/search/by-tags
@@ -15,14 +16,4 @@ Accept: application/json
 {
   "query": "사과",
   "top_k": 5
-}
-
-### Deprecated Alias
-POST {{baseUrl}}/search/text
-Content-Type: application/json
-Accept: application/json
-
-{
-  "query": "apple",
-  "top_k": 3
 }

@@ -70,9 +70,9 @@ DOC_FINDER_VISION_API_KEY=your_api_key
 ## Tagger Providers
 
 - `static`: JSON fixture에 정의된 태그를 사용한다. 로컬 스모크 테스트용이다.
-- `http`: 외부 태깅 API에 이미지 base64 payload를 보내고 태그 응답을 받는다.
+- `http`: Florence-2 같은 외부 태깅 API에 이미지 base64 payload를 보내고 태그 응답을 받는다.
 
-로컬 Florence/PaliGemma/SearchTag 튜닝 코드는 현재 핵심 경로에서 제거했다. 다시 필요해지면 별도 실험 브랜치나 외부 태깅 서비스로 분리해서 붙이는 편이 안전하다.
+로컬 Florence/PaliGemma/SearchTag 튜닝 코드는 현재 core 경로에서 분리했다. Florence-2를 쓰지 않는다는 뜻은 아니며, 모델 런타임은 별도 태깅 서비스로 검증한 뒤 `http` provider 뒤에 붙이는 편이 안전하다.
 
 ## Run API
 

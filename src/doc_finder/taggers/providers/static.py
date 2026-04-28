@@ -19,8 +19,6 @@ def build_static_tagger(
     query_normalizer: QueryNormalizer,
     environ: Mapping[str, str],
 ):
-    del query_normalizer
-
     mapping_path = environ.get("DOC_FINDER_STATIC_TAGS")
     if not mapping_path:
         raise ValueError(

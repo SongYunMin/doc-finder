@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from doc_finder import bootstrap
@@ -56,3 +57,34 @@ def test_available_tagger_providers_exposes_only_core_providers() -> None:
     assert "static" in providers
     assert "florence2" not in providers
     assert "paligemma2" not in providers
+
+
+def test_static_tagger_provider_builds_from_json_fixture(tmp_path: Path) -> None:
+    from doc_finder.taggers import build_tagger
+
+    mapping_path = tmp_path / "static-tags.json"
+    mapping_path.write_text(
+        json.dumps(
+            {
+                "10565_20077_1.png": {
+                    "keyword_tags": ["사과", "apple"],
+                    "normalized_tags": ["사과"],
+                    "confidence": 0.95,
+                }
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    tagger = build_tagger(
+        "static",
+        query_normalizer=QueryNormalizer(),
+        environ={"DOC_FINDER_STATIC_TAGS": str(mapping_path)},
+    )
+
+    result = tagger.tag(Path("10565_20077_1.png"), "unused")
+
+    assert result.keyword_tags == ["사과", "apple"]
+    assert result.normalized_tags == ["apple"]
+    assert result.confidence == 0.95
