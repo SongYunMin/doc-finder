@@ -1,13 +1,16 @@
 import argparse
 from dataclasses import asdict, is_dataclass
+import json
+import os
 from pathlib import Path
 
 from doc_finder.bootstrap import (
     build_default_ingestion_service,
     build_default_search_service,
 )
-from doc_finder.schemas.search import TagSearchRequest, TagSearchResponse
-from doc_finder.services.ingestion_service import IngestionSummary
+from doc_finder.schemas.search import TagSearchRequest
+from doc_finder.services.tag_preview_service import TagPreviewService
+from doc_finder.taggers import build_tagger
 
 
 def _drop_none_fields(value):
@@ -50,6 +53,26 @@ def main(argv: list[str] | None = None) -> None:
         help="Directory containing image assets to ingest.",
     )
 
+    tag_parser = subparsers.add_parser(
+        "tag",
+        help="Preview tags from a directory without writing to the database.",
+    )
+    tag_parser.add_argument(
+        "--image-dir",
+        required=True,
+        help="Directory containing image assets to preview.",
+    )
+    tag_parser.add_argument(
+        "--tagger-provider",
+        default="florence2",
+        help="Tagger provider to use for preview.",
+    )
+    tag_parser.add_argument(
+        "--florence2-model-id",
+        default=None,
+        help="Optional Florence-2 model id override for preview runs.",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "search":
@@ -63,6 +86,22 @@ def main(argv: list[str] | None = None) -> None:
             )
         )
         print(result.model_dump())
+        return
+
+    if args.command == "tag":
+        # DB 저장 없이 provider 실행 결과만 비교할 수 있도록 CLI override env를 만든다.
+        runtime_environ = dict(os.environ)
+        runtime_environ["DOC_FINDER_TAGGER_PROVIDER"] = args.tagger_provider
+        if args.florence2_model_id is not None:
+            runtime_environ["DOC_FINDER_FLORENCE2_MODEL_ID"] = args.florence2_model_id
+
+        tagger = build_tagger(
+            args.tagger_provider,
+            environ=runtime_environ,
+        )
+        report = TagPreviewService(tagger).preview_directory(Path(args.image_dir))
+        # 사람이 비교하기 쉬운 진단 출력이 우선이므로 줄바꿈된 JSON으로 렌더링한다.
+        print(json.dumps(_drop_none_fields(report), ensure_ascii=False, indent=2))
         return
 
     # MVP에서는 배치 인덱싱을 HTTP job 없이 돌릴 수 있게 CLI를 우선 경로로 둔다.

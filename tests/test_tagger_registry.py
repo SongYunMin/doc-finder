@@ -48,14 +48,15 @@ def test_build_default_ingestion_service_uses_generic_tagger_builder(monkeypatch
     assert isinstance(captured["query_normalizer"], QueryNormalizer)
 
 
-def test_available_tagger_providers_exposes_only_core_providers() -> None:
+def test_available_tagger_providers_exposes_preview_providers() -> None:
     from doc_finder.taggers import available_tagger_providers
 
     providers = available_tagger_providers()
 
     assert "http" in providers
     assert "static" in providers
-    assert "florence2" not in providers
+    assert "florence2" in providers
+    assert "florence2-large-ft" in providers
     assert "paligemma2" not in providers
 
 
@@ -88,3 +89,32 @@ def test_static_tagger_provider_builds_from_json_fixture(tmp_path: Path) -> None
     assert result.keyword_tags == ["사과", "apple"]
     assert result.normalized_tags == ["apple"]
     assert result.confidence == 0.95
+
+
+def test_florence2_large_ft_provider_allows_model_id_override(monkeypatch) -> None:
+    from doc_finder.taggers import build_tagger
+    from doc_finder.taggers.providers import florence2_large_ft as provider_module
+
+    captured: dict[str, object] = {}
+
+    class _FakeFlorence2LargeFtVisionTagger:
+        def __init__(self, **kwargs) -> None:
+            captured.update(kwargs)
+
+    monkeypatch.setattr(
+        provider_module,
+        "Florence2LargeFtVisionTagger",
+        _FakeFlorence2LargeFtVisionTagger,
+    )
+
+    build_tagger(
+        "florence2-large-ft",
+        query_normalizer=QueryNormalizer(),
+        environ={
+            "DOC_FINDER_FLORENCE2_DEVICE": "cpu",
+            "DOC_FINDER_FLORENCE2_TORCH_DTYPE": "float32",
+            "DOC_FINDER_FLORENCE2_MODEL_ID": "microsoft/Florence-2-large",
+        },
+    )
+
+    assert captured["model_id"] == "microsoft/Florence-2-large"
