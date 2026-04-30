@@ -3,10 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from doc_finder.services.tagging_service import _read_vision_payload_bytes
-
-
-PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+from doc_finder.services.image_payload import PNG_SIGNATURE, read_white_background_png_bytes
 
 
 @dataclass(slots=True)
@@ -89,8 +86,8 @@ def _iter_svg_files(root: Path):
 
 
 def _convert_svg_to_png_bytes(source_path: Path) -> bytes:
-    # HTTP 태거 payload와 같은 전처리를 써서 사전 변환 결과와 모델 입력 결과를 맞춘다.
-    png_bytes = _read_vision_payload_bytes(source_path)
+    # Gemma 입력과 동일하게 SVG를 흰 배경 PNG로 렌더링한다.
+    png_bytes = read_white_background_png_bytes(source_path)
     if not png_bytes.startswith(PNG_SIGNATURE):
         raise ValueError("SVG could not be rendered as PNG.")
     return png_bytes

@@ -5,6 +5,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from doc_finder.services.image_payload import flatten_transparent_image_bytes
+
 
 @dataclass(slots=True)
 class WhiteBackgroundEvent:
@@ -70,12 +72,8 @@ def _png_has_alpha(asset_path: Path) -> bool:
 
 
 def _flatten_png_to_white_background(asset_path: Path) -> None:
-    with Image.open(asset_path) as image:
-        # 투명 영역은 모델이 검정 배경으로 오판하기 쉬우므로 파일 자체를 흰 배경 RGB PNG로 고정한다.
-        source = image.convert("RGBA")
-        background = Image.new("RGBA", source.size, (255, 255, 255, 255))
-        background.alpha_composite(source)
-        background.convert("RGB").save(asset_path, format="PNG")
+    # 투명 영역은 모델이 검정 배경으로 오판하기 쉬우므로 파일 자체를 흰 배경 RGB PNG로 고정한다.
+    asset_path.write_bytes(flatten_transparent_image_bytes(asset_path.read_bytes()))
 
 
 def _record_event(
